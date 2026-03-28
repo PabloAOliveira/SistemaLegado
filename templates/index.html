@@ -26,7 +26,7 @@
                 |
                 <a href="/editar/{{ demanda[0] }}">Editar</a>
                 |
-                <a href="/deletar/{{ demanda[0] }}" style="color:red;">Deletar</a>
+                <a href="#" style="color:red;" onclick="deletarDemanda({{ demanda[0] }}); return false;">Deletar</a>
             </td>
         </tr>
         {% endfor %}
@@ -36,5 +36,17 @@
 
 <br><br>
 <a href="/nova_demanda"><button>+ Nova Demanda</button></a>
+
+<script>
+function deletarDemanda(id) {
+    fetch('/deletar/' + id, { method: 'DELETE' })
+        .then(function() {
+            window.location.href = '/';
+        })
+        .catch(function() {
+            alert('Erro ao deletar demanda.');
+        });
+}
+</script>
 
 {% endblock %}

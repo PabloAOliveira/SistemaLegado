@@ -73,7 +73,7 @@ def test_editar_post_atualiza_demanda_e_redireciona(client, db_path: Path):
 
 
 def test_deletar_remove_demanda_e_redireciona(client, db_path: Path):
-    response = client.get("/deletar/2", follow_redirects=False)
+    response = client.delete("/deletar/2", follow_redirects=False)
 
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/")
