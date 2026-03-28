@@ -11,6 +11,12 @@ python app.py
 
 Acesse: http://localhost:5000
 
+## Testes automatizados (E2E)
+
+```bash
+pytest tests/e2e -v
+```
+
 ## Funcionalidades
 
 - Criar demandas
