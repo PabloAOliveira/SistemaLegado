@@ -3,13 +3,13 @@
 {% block content %}
 <h2>Lista de Demandas</h2>
 
-
-<table border="1" cellpadding="10" cellspacing="0" width="100%">
+<table class="table-demandas">
     <thead>
-        <tr bgcolor="#cccccc">
+        <tr>
             <th>ID</th>
             <th>Título</th>
             <th>Solicitante</th>
+            <th>Prioridade</th>
             <th>Data</th>
             <th>Ações</th>
         </tr>
@@ -20,19 +20,33 @@
             <td>{{ demanda[0] }}</td>
             <td>{{ demanda[1] }}</td>
             <td>{{ demanda[3] }}</td>
-            <td>{{ demanda[4] }}</td>
+
+            <td>
+                {% set p = demanda[4]|lower if demanda[4] else '' %}
+
+                {% if p == 'alta' %}
+                    <span class="priority-badge priority-alta">Alta</span>
+                {% elif p == 'média' or p == 'media' %}
+                    <span class="priority-badge priority-media">Média</span>
+                {% elif p == 'baixa' %}
+                    <span class="priority-badge priority-baixa">Baixa</span>
+                {% else %}
+                    <span class="priority-badge priority-sem-valor">---</span>
+                {% endif %}
+            </td>
+
+            <td>{{ demanda[5] }}</td>
             <td>
                 <a href="/detalhes/{{ demanda[0] }}">Ver</a>
                 |
                 <a href="/editar/{{ demanda[0] }}">Editar</a>
                 |
-                <a href="#" style="color:red;" onclick="deletarDemanda({{ demanda[0] }}); return false;">Deletar</a>
+                <a href="#" class="action-delete" onclick="deletarDemanda({{ demanda[0] }}); return false;">Deletar</a>
             </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
-
 
 <br><br>
 <a href="/nova_demanda"><button>+ Nova Demanda</button></a>

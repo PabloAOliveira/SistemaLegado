@@ -24,6 +24,7 @@ def test_nova_demanda_post_cria_registro_e_redireciona(client, db_path: Path):
             "titulo": "Nova feature",
             "descricao": "Implementar upload de arquivos",
             "solicitante": "Time Produto",
+            "prioridade": "baixa",
         },
         follow_redirects=False,
     )
@@ -34,11 +35,11 @@ def test_nova_demanda_post_cria_registro_e_redireciona(client, db_path: Path):
     with sqlite3.connect(str(db_path)) as conn:
         cursor = conn.cursor()
         created = cursor.execute(
-            "SELECT titulo, descricao, solicitante FROM demandas WHERE titulo = ?",
+            "SELECT titulo, descricao, solicitante, prioridade FROM demandas WHERE titulo = ?",
             ("Nova feature",),
         ).fetchone()
 
-    assert created == ("Nova feature", "Implementar upload de arquivos", "Time Produto")
+    assert created == ("Nova feature", "Implementar upload de arquivos", "Time Produto", "baixa")
 
 
 def test_editar_get_exibe_demanda(client):
@@ -56,6 +57,7 @@ def test_editar_post_atualiza_demanda_e_redireciona(client, db_path: Path):
             "titulo": "Login corrigido",
             "descricao": "Ajuste final do login",
             "solicitante": "Equipe Suporte",
+            "prioridade": "media",
         },
         follow_redirects=False,
     )
@@ -66,10 +68,10 @@ def test_editar_post_atualiza_demanda_e_redireciona(client, db_path: Path):
     with sqlite3.connect(str(db_path)) as conn:
         cursor = conn.cursor()
         updated = cursor.execute(
-            "SELECT titulo, descricao, solicitante FROM demandas WHERE id = 1"
+            "SELECT titulo, descricao, solicitante, prioridade FROM demandas WHERE id = 1"
         ).fetchone()
 
-    assert updated == ("Login corrigido", "Ajuste final do login", "Equipe Suporte")
+    assert updated == ("Login corrigido", "Ajuste final do login", "Equipe Suporte", "media")
 
 
 def test_deletar_remove_demanda_e_redireciona(client, db_path: Path):

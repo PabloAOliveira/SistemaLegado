@@ -21,6 +21,7 @@ def db_path(tmp_path: Path) -> Path:
             titulo TEXT,
             descricao TEXT,
             solicitante TEXT,
+            prioridade TEXT,
             data_criacao TEXT
         )
         """
@@ -40,14 +41,14 @@ def db_path(tmp_path: Path) -> Path:
 
     cursor.execute(
         """
-        INSERT INTO demandas (id, titulo, descricao, solicitante, data_criacao)
-        VALUES (1, 'Corrigir bug no login', 'Usuários nao conseguem fazer login', 'Joao Silva', '2024-01-15 10:30:00')
+        INSERT INTO demandas (id, titulo, descricao, solicitante, prioridade, data_criacao)
+        VALUES (1, 'Corrigir bug no login', 'Usuários nao conseguem fazer login', 'Joao Silva', 'alta', '2024-01-15 10:30:00')
         """
     )
     cursor.execute(
         """
-        INSERT INTO demandas (id, titulo, descricao, solicitante, data_criacao)
-        VALUES (2, 'Implementar relatório de vendas', 'Precisamos de um relatório mensal', 'Maria Santos', '2024-01-16 14:20:00')
+        INSERT INTO demandas (id, titulo, descricao, solicitante, prioridade, data_criacao)
+        VALUES (2, 'Implementar relatório de vendas', 'Precisamos de um relatório mensal', 'Maria Santos', 'media', '2024-01-16 14:20:00')
         """
     )
     cursor.execute(

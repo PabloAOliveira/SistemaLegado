@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import secrets
-from datetime import datetime
+import datetime
 from flask import Flask, flash, redirect, render_template, request, url_for
 from dotenv import load_dotenv
 
@@ -49,12 +49,25 @@ def log_db_error(operation, error, **context):
     context_str = ", ".join(f"{key}={value!r}" for key, value in context.items())
     app.logger.exception("Database error during %s (%s): %s", operation, context_str, error)
 
+def date_now():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 
 @app.route('/', methods=['GET'])
 def index():
-    demandas = fetch_all("SELECT * FROM demandas")
+    demandas = fetch_all("""
+                         SELECT *
+                         FROM demandas
+                         ORDER BY CASE LOWER(prioridade)
+                                      WHEN 'alta' THEN 1
+                                      WHEN 'média' THEN 2
+                                      WHEN 'media' THEN 2
+                                      WHEN 'baixa' THEN 3
+                                      ELSE 4
+                                      END,
+                                  data_criacao DESC
+                         """)
     return render_template('index.html', demandas=demandas)
-
 
 @app.route('/nova_demanda', methods=['GET', 'POST'])
 def nova_demanda():
@@ -62,11 +75,12 @@ def nova_demanda():
         titulo = request.form['titulo']
         descricao = request.form['descricao']
         solicitante = request.form['solicitante']
+        prioridade = request.form['prioridade']
 
         try:
             execute_query(
-                "INSERT INTO demandas (titulo, descricao, solicitante, data_criacao) VALUES (?, ?, ?, ?)",
-                (titulo, descricao, solicitante, str(datetime.now())),
+                "INSERT INTO demandas (titulo, descricao, solicitante, prioridade, data_criacao) VALUES (?, ?, ?, ?, ?)",
+                (titulo, descricao, solicitante, prioridade, str(date_now())),
             )
         except sqlite3.Error as error:
             log_db_error("nova_demanda", error, solicitante=solicitante)
@@ -84,12 +98,13 @@ def editar(demanda_id):
     if request.method == 'POST':
         titulo = request.form['titulo']
         descricao = request.form['descricao']
+        prioridade = request.form['prioridade']
         solicitante = request.form['solicitante']
 
         try:
             execute_query(
-                "UPDATE demandas SET titulo = ?, descricao = ?, solicitante = ? WHERE id = ?",
-                (titulo, descricao, solicitante, demanda_id),
+                "UPDATE demandas SET titulo = ?, descricao = ?, prioridade = ?, solicitante = ? WHERE id = ?",
+                (titulo, descricao, prioridade, solicitante, demanda_id),
             )
         except sqlite3.Error as error:
             log_db_error("editar", error, demanda_id=demanda_id, solicitante=solicitante)
@@ -143,7 +158,7 @@ def adicionar_comentario(demanda_id):
     try:
         execute_query(
             'INSERT INTO comentarios (demanda_id, comentario, autor, data) VALUES (?, ?, ?, ?)',
-            (demanda_id, comentario, autor, str(datetime.now())),
+            (demanda_id, comentario, autor, str(date_now())),
         )
     except sqlite3.Error as error:
         log_db_error("adicionar_comentario", error, demanda_id=demanda_id, autor=autor)
