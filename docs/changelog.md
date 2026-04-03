@@ -86,4 +86,44 @@ Este documento resume as mudancas realizadas no projeto `SistemaLegado` durante 
 - Arquivo de code review movido para `docs/Code-Review.md`.
 - Novo guia de quality gate criado em `docs/quality-gate.md` com instrucoes para SonarQube e Qodana.
 
+## 2026-03-29 - MariaChehade
 
+Este bloco resume as mudancas introduzidas pela Maria no projeto.
+
+### Backend (`app.py`)
+
+- Adicionado o campo `prioridade` na entidade de demandas.
+- Persistencia da prioridade incluida no fluxo de criacao/edicao no banco.
+- Ordenacao por prioridade aplicada na listagem principal.
+
+### Frontend (`templates/`)
+
+- Formularios e telas atualizados para exibir/editar o campo `prioridade`.
+- Tela principal ajustada para refletir a nova ordenacao por prioridade.
+
+### Commits relacionados
+
+- `b2c6eaa`: `feat(prioridade): add campo prioridade nas telas e banco e ordenando as prioridades na tela principal`
+- `6467d51`: commit de teste inicial da autora no repositorio.
+
+## 2026-04-03 - Higor Milani
+
+### ADRs (Architecture Decision Records)
+
+- Criada a pasta `docs/adrs/` para registrar decisoes tecnicas de forma rastreavel.
+- Criado indice em `docs/adrs/README.md` com a lista de ADRs do projeto.
+- Formalizadas decisoes tecnicas importantes em documentos ADR:
+  - `ADR-001`: acesso a dados com helpers e SQL parametrizado.
+  - `ADR-002`: semantica HTTP/REST nas rotas.
+  - `ADR-003`: configuracao por ambiente e segredo fora do codigo.
+  - `ADR-004` (Proposto): migracoes de schema com Flask-Migrate.
+  - `ADR-005`: estrategia de testes E2E com banco isolado.
+  - `ADR-006`: separacao de dependencias por ambiente e quality gate.
+
+### Rastreabilidade Git (contexto dos ADRs)
+
+- `6675f5c`: refatoracao de banco, seguranca e configuracao por ambiente.
+- `1c2d596`: criacao da suite de testes E2E.
+- `7a45d54`: reorganizacao de dependencias por ambiente.
+- `422f353`: documentacao tecnica e quality gate.
+- `b2c6eaa`: adicao de `prioridade` (motivando ADR de migracoes).
