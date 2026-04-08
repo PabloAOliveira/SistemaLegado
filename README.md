@@ -26,14 +26,18 @@ python -m pytest tests/e2e -v
 - Deletar demandas
 - Visualizar detalhes
 - Comentários
+- Classificação por prioridade (alta, média, baixa)
+- Filtros por prioridade
+- Ordenação automática por prioridade
 
 ---
 
 **TODO:**
-- Adicionar prioridades
 - Melhorar busca
 - Adicionar usuários
 
 ---
+
+.\.venv\Scripts\python.exe app.py
 
 *Desenvolvido em 2026*
