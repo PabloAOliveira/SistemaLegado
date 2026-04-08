@@ -127,3 +127,18 @@ Este bloco resume as mudancas introduzidas pela Maria no projeto.
 - `7a45d54`: reorganizacao de dependencias por ambiente.
 - `422f353`: documentacao tecnica e quality gate.
 - `b2c6eaa`: adicao de `prioridade` (motivando ADR de migracoes).
+
+## 2026-04-07 - Higor Milani
+
+### Migracoes de banco (Flask-Migrate)
+
+- Implementado `Flask-Migrate` + `Flask-SQLAlchemy` no bootstrap da aplicacao (`app.py`).
+- Criado `models.py` com metadados das tabelas `demandas` e `comentarios` para versionamento de schema.
+- Criada estrutura de migracao em `migrations/` com revisao base `20260407_01`.
+- A revisao base ajusta bancos legados sem apagar dados:
+  - garante coluna `prioridade` em `demandas`.
+  - garante chave primaria `id` autoincremental.
+- `init_db.py` foi alterado para:
+  - aplicar `db upgrade` via Flask-Migrate.
+  - popular seed de forma idempotente (`INSERT OR IGNORE`).
+

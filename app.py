@@ -3,7 +3,9 @@ import sqlite3
 import secrets
 import datetime
 from flask import Flask, flash, redirect, render_template, request, url_for
+from flask_migrate import Migrate
 from dotenv import load_dotenv
+from models import db
 
 app = Flask(__name__)
 load_dotenv()
@@ -20,6 +22,13 @@ if not flask_secret_key:
 
 app.secret_key = flask_secret_key
 DATABASE_PATH = os.getenv('DATABASE_PATH', 'demandas.db')
+
+database_path_abs = os.path.abspath(DATABASE_PATH)
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{database_path_abs}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+migrate = Migrate(app, db)
 
 
 def get_db():
