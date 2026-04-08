@@ -9,8 +9,13 @@
     <p>{{ demanda[2] }}</p>
     
     <p><strong>Solicitante:</strong> {{ demanda[3] }}</p>
-    <p><strong>Data de Criação:</strong> {{ demanda[4] }}</p>
-    
+    <p><strong>Prioridade:</strong> {{ demanda[4] }}</p>
+    <p><strong>Data de Criação:</strong> 
+        {% set data = demanda[5].split(' ') %}
+        {% set date_parts = data[0].split('-') %}
+        {{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}
+    </p>
+
     <br>
     <a href="/editar/{{ demanda[0] }}"><button>Editar</button></a>
     <a href="/"><button>Voltar</button></a>
@@ -20,7 +25,11 @@
 
 {% for comentario in comentarios %}
 <div style="background:#f0f0f0; padding:10px; margin:10px 0;">
-    <p><strong>{{ comentario[3] }}</strong> em {{ comentario[4] }}</p>
+    <p><strong>{{ comentario[3] }}</strong> em 
+        {% set data = comentario[4].split(' ') %}
+        {% set date_parts = data[0].split('-') %}
+        {{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}
+    </p>
     <p>{{ comentario[2] }}</p>
 </div>
 {% endfor %}

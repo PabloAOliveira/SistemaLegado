@@ -23,9 +23,26 @@
     </div>
     <br>
     
+<div>
+    <label>Prioridade:</label><br>
+
+    {% set p = demanda[4]|lower if demanda[4] else '' %}
+
+    <select name="prioridade">
+        <option value="alta" {% if p == 'alta' %}selected{% endif %}>Alta</option>
+
+        <option value="media" {% if p == 'media' or p == 'média' %}selected{% endif %}>Média</option>
+
+        <option value="baixa" {% if p == 'baixa' %}selected{% endif %}>Baixa</option>
+    </select>
+</div>
+    <br>
+
     <div>
         <label>Data de Criação:</label><br>
-        <input type="text" value="{{ demanda[4] }}" disabled>
+        {% set data = demanda[5].split(' ') %}
+        {% set date_parts = data[0].split('-') %}
+        <input type="text" value="{{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}" disabled>
     </div>
     <br>
     
