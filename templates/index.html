@@ -3,6 +3,16 @@
 {% block content %}
 <h2>Lista de Demandas</h2>
 
+<form method="GET" action="/" style="margin-bottom: 20px;">
+    <label for="prioridade">Filtrar por Prioridade:</label>
+    <select name="prioridade" id="prioridade" onchange="this.form.submit()">
+        <option value="todas" {% if prioridade_filtro == 'todas' or not prioridade_filtro %}selected{% endif %}>Todas</option>
+        <option value="alta" {% if prioridade_filtro == 'alta' %}selected{% endif %}>Alta</option>
+        <option value="media" {% if prioridade_filtro == 'media' or prioridade_filtro == 'média' %}selected{% endif %}>Média</option>
+        <option value="baixa" {% if prioridade_filtro == 'baixa' %}selected{% endif %}>Baixa</option>
+    </select>
+</form>
+
 <table class="table-demandas">
     <thead>
         <tr>
@@ -35,7 +45,11 @@
                 {% endif %}
             </td>
 
-            <td>{{ demanda[5] }}</td>
+            <td>
+                {% set data = demanda[5].split(' ') %}
+                {% set date_parts = data[0].split('-') %}
+                {{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}
+            </td>
             <td>
                 <a href="/detalhes/{{ demanda[0] }}">Ver</a>
                 |
