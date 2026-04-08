@@ -127,3 +127,21 @@ Este bloco resume as mudancas introduzidas pela Maria no projeto.
 - `7a45d54`: reorganizacao de dependencias por ambiente.
 - `422f353`: documentacao tecnica e quality gate.
 - `b2c6eaa`: adicao de `prioridade` (motivando ADR de migracoes).
+
+## 2026-04-08 - 1134927
+
+### Frontend (`templates/nova_demanda.html`)
+
+- Validacao no formulario de criacao de demanda para impedir salvar sem preencher:
+  - `titulo`, `descricao` e `solicitante` (campos marcados como `required`).
+  - Bloqueio do submit quando o valor for apenas espacos (trim) com aviso via `alert` e foco no primeiro campo faltante.
+
+### Dependencias
+
+- `requirements.txt` atualizado.
+- `requirements-test.txt` ajustado para `pytest==6.2.5`.
+- Adicionado `requirements-freeze.txt`.
+
+### Commits relacionados
+
+- `f780d02`: `Valida titulo, descricao e solicitante no front-end`
