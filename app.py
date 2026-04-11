@@ -2,6 +2,7 @@ import os
 import sqlite3
 import secrets
 import datetime
+from contextlib import closing
 from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_migrate import Migrate
 from dotenv import load_dotenv
@@ -32,7 +33,7 @@ migrate = Migrate(app, db)
 
 
 def get_db():
-    return sqlite3.connect(DATABASE_PATH)
+    return closing(sqlite3.connect(DATABASE_PATH))
 
 
 def fetch_all(query, params=()):

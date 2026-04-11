@@ -34,6 +34,7 @@ python -m flask --app app db upgrade
 ```bash
 pip install -r requirements-test.txt
 python -m pytest tests/e2e -v
+pytest --cov=. --cov-report=xml --cov-report=term-missing
 ```
 
 ## Funcionalidades
