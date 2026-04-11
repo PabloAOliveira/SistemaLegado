@@ -1,0 +1,24 @@
+[run]
+branch = True
+source = .
+omit =
+    */tests/*
+    */__pycache__/*
+    */migrations/*
+    */venv/*
+    */.venv/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+    @abc.abstractmethod
+
+[xml]
+output = coverage.xml
+
