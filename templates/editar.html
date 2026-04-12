@@ -40,7 +40,9 @@
 
     <div>
         <label>Data de Criação:</label><br>
-        <input type="text" value="{{ demanda[5] }}" disabled>
+        {% set data = demanda[5].split(' ') %}
+        {% set date_parts = data[0].split('-') %}
+        <input type="text" value="{{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}" disabled>
     </div>
     <br>
     
