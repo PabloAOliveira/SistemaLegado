@@ -3,6 +3,8 @@
 {% block content %}
 <h2>Detalhes da Demanda #{{ demanda[0] }}</h2>
 
+<div class="detalhes-main-scroll">
+
 <div class="details-card glass-panel-soft">
     <h3>{{ demanda[1] }}</h3>
     <p><strong>Descrição:</strong></p>
@@ -49,5 +51,7 @@
         <button type="submit">Enviar Comentário</button>
     </div>
 </form>
+
+</div>
 
 {% endblock %}

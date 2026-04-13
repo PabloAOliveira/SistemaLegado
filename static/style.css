@@ -297,7 +297,9 @@ textarea {
 #form-nova-demanda .form-field select,
 #form-editar-demanda .form-field input,
 #form-editar-demanda .form-field textarea,
-#form-editar-demanda .form-field select {
+#form-editar-demanda .form-field select,
+.form-card .form-field input,
+.form-card .form-field textarea {
     margin-top: 10px;
 }
 
@@ -317,8 +319,22 @@ textarea {
     scrollbar-width: thin;
 }
 
+.detalhes-main-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    padding-right: 6px;
+    scrollbar-color: var(--table-scroll-thumb) var(--table-scroll-track);
+    scrollbar-width: thin;
+}
+
 #form-nova-demanda::-webkit-scrollbar,
 #form-editar-demanda::-webkit-scrollbar {
+    width: 10px;
+}
+
+.detalhes-main-scroll::-webkit-scrollbar {
     width: 10px;
 }
 
@@ -328,8 +344,20 @@ textarea {
     border-radius: 999px;
 }
 
+.detalhes-main-scroll::-webkit-scrollbar-track {
+    background: var(--table-scroll-track);
+    border-radius: 999px;
+}
+
 #form-nova-demanda::-webkit-scrollbar-thumb,
 #form-editar-demanda::-webkit-scrollbar-thumb {
+    background: var(--table-scroll-thumb);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.detalhes-main-scroll::-webkit-scrollbar-thumb {
     background: var(--table-scroll-thumb);
     border-radius: 999px;
     border: 2px solid transparent;
