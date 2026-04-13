@@ -3,67 +3,80 @@
 {% block content %}
 <h2>Lista de Demandas</h2>
 
-<form method="GET" action="/" style="margin-bottom: 20px;">
-    <label for="prioridade">Filtrar por Prioridade:</label>
-    <select name="prioridade" id="prioridade" onchange="this.form.submit()">
-        <option value="todas" {% if prioridade_filtro == 'todas' or not prioridade_filtro %}selected{% endif %}>Todas</option>
-        <option value="alta" {% if prioridade_filtro == 'alta' %}selected{% endif %}>Alta</option>
-        <option value="media" {% if prioridade_filtro == 'media' or prioridade_filtro == 'média' %}selected{% endif %}>Média</option>
-        <option value="baixa" {% if prioridade_filtro == 'baixa' %}selected{% endif %}>Baixa</option>
-    </select>
-</form>
+<div class="page-toolbar glass-panel-soft">
+    <div class="toolbar-inner">
+        <form method="GET" action="/" class="filter-form">
+            <label for="prioridade">Filtrar por Prioridade:</label>
+            <select name="prioridade" id="prioridade" onchange="this.form.submit()">
+                <option value="todas" {% if prioridade_filtro == 'todas' or not prioridade_filtro %}selected{% endif %}>Todas</option>
+                <option value="alta" {% if prioridade_filtro == 'alta' %}selected{% endif %}>Alta</option>
+                <option value="media" {% if prioridade_filtro == 'media' or prioridade_filtro == 'média' %}selected{% endif %}>Média</option>
+                <option value="baixa" {% if prioridade_filtro == 'baixa' %}selected{% endif %}>Baixa</option>
+            </select>
+        </form>
+        <a href="/nova_demanda" class="button-link">+ Nova Demanda</a>
+    </div>
+</div>
 
-<table class="table-demandas">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Título</th>
-            <th>Solicitante</th>
-            <th>Prioridade</th>
-            <th>Data</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for demanda in demandas %}
-        <tr>
-            <td>{{ demanda[0] }}</td>
-            <td>{{ demanda[1] }}</td>
-            <td>{{ demanda[3] }}</td>
+<div class="table-scroll">
+    <table class="table-demandas">
+        <colgroup>
+            <col style="width: 8%;">
+            <col style="width: 28%;">
+            <col style="width: 19%;">
+            <col style="width: 14%;">
+            <col style="width: 16%;">
+            <col style="width: 15%;">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Solicitante</th>
+                <th>Prioridade</th>
+                <th>Data</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for demanda in demandas %}
+            {% set p = demanda[4]|lower if demanda[4] else '' %}
+            {% set priority_row_class = 'priority-row-alta' if p == 'alta' else 'priority-row-media' if p == 'média' or p == 'media' else 'priority-row-baixa' if p == 'baixa' else 'priority-row-sem-valor' %}
+            <tr class="{{ priority_row_class }}">
+                <td>{{ demanda[0] }}</td>
+                <td>{{ demanda[1] }}</td>
+                <td>{{ demanda[3] }}</td>
 
-            <td>
-                {% set p = demanda[4]|lower if demanda[4] else '' %}
+                <td>
+                    {% if p == 'alta' %}
+                        <span class="priority-text">Alta</span>
+                    {% elif p == 'média' or p == 'media' %}
+                        <span class="priority-text">Média</span>
+                    {% elif p == 'baixa' %}
+                        <span class="priority-text">Baixa</span>
+                    {% else %}
+                        <span class="priority-text">---</span>
+                    {% endif %}
+                </td>
 
-                {% if p == 'alta' %}
-                    <span class="priority-badge priority-alta">Alta</span>
-                {% elif p == 'média' or p == 'media' %}
-                    <span class="priority-badge priority-media">Média</span>
-                {% elif p == 'baixa' %}
-                    <span class="priority-badge priority-baixa">Baixa</span>
-                {% else %}
-                    <span class="priority-badge priority-sem-valor">---</span>
-                {% endif %}
-            </td>
+                <td>
+                    {% set data = demanda[5].split(' ') %}
+                    {% set date_parts = data[0].split('-') %}
+                    {{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}
+                </td>
+                <td>
+                    <div class="row-actions">
+                        <a href="/detalhes/{{ demanda[0] }}" class="action-view" data-label="Ver" aria-label="Ver demanda {{ demanda[0] }}"></a>
+                        <a href="/editar/{{ demanda[0] }}" class="action-edit" data-label="Editar" aria-label="Editar demanda {{ demanda[0] }}"></a>
+                        <a href="#" class="action-delete" data-label="Deletar" aria-label="Deletar demanda {{ demanda[0] }}" onclick="deletarDemanda({{ demanda[0] }}); return false;"></a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
-            <td>
-                {% set data = demanda[5].split(' ') %}
-                {% set date_parts = data[0].split('-') %}
-                {{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}
-            </td>
-            <td>
-                <a href="/detalhes/{{ demanda[0] }}">Ver</a>
-                |
-                <a href="/editar/{{ demanda[0] }}">Editar</a>
-                |
-                <a href="#" class="action-delete" onclick="deletarDemanda({{ demanda[0] }}); return false;">Deletar</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<br><br>
-<a href="/nova_demanda"><button>+ Nova Demanda</button></a>
 
 <script>
 function deletarDemanda(id) {

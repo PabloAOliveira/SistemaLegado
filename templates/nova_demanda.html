@@ -3,26 +3,23 @@
 {% block content %}
 <h2>Nova Demanda</h2>
 
-<form id="form-nova-demanda" method="POST" action="/nova_demanda">
-    <div>
+<form id="form-nova-demanda" method="POST" action="/nova_demanda" class="form-card glass-panel-soft">
+    <div class="form-field">
         <label>Título:</label><br>
         <input type="text" name="titulo" size="50" required>
     </div>
-    <br>
-    
-    <div>
+
+    <div class="form-field">
         <label>Descrição:</label><br>
         <textarea name="descricao" rows="5" cols="50" required></textarea>
     </div>
-    <br>
-    
-    <div>
+
+    <div class="form-field">
         <label>Solicitante:</label><br>
         <input type="text" name="solicitante" required>
     </div>
-    <br>
 
-        <div>
+    <div class="form-field">
         <label>Prioridade:</label><br>
         <select name="prioridade" required>
             <option value="baixa">Baixa</option>
@@ -30,10 +27,13 @@
             <option value="alta">Alta</option>
         </select>
     </div>
-    <br>
-    
-    <button type="submit">Salvar</button>
-    <a href="/"><button type="button">Cancelar</button></a>
+
+
+
+    <div class="form-actions">
+        <button type="submit">Salvar</button>
+        <a href="/" class="button-link button-link-muted">Cancelar</a>
+    </div>
 </form>
 
 <script>
