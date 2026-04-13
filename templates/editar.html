@@ -27,11 +27,11 @@
         {% set p = demanda[4]|lower if demanda[4] else '' %}
 
         <select id="prioridade" name="prioridade" required>
-            <option value="alta" {% if p == 'alta' %}selected{% endif %}>Alta</option>
+            <option value="alta" {% if p =="alta" %}selected{% endif %}>Alta</option>
 
-            <option value="media" {% if p == 'media' or p == 'média' %}selected{% endif %}>Média</option>
+            <option value="media" {% if p =="media" or p =="média" %}selected{% endif %}>Média</option>
 
-            <option value="baixa" {% if p == 'baixa' %}selected{% endif %}>Baixa</option>
+            <option value="baixa" {% if p =="baixa" %}selected{% endif %}>Baixa</option>
         </select>
     </div>
 

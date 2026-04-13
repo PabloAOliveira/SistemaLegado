@@ -8,10 +8,10 @@
         <form method="GET" action="/" class="filter-form">
             <label for="prioridade">Filtrar por Prioridade:</label>
             <select name="prioridade" id="prioridade" onchange="this.form.submit()">
-                <option value="todas" {% if prioridade_filtro == 'todas' or not prioridade_filtro %}selected{% endif %}>Todas</option>
-                <option value="alta" {% if prioridade_filtro == 'alta' %}selected{% endif %}>Alta</option>
-                <option value="media" {% if prioridade_filtro == 'media' or prioridade_filtro == 'média' %}selected{% endif %}>Média</option>
-                <option value="baixa" {% if prioridade_filtro == 'baixa' %}selected{% endif %}>Baixa</option>
+                <option value="todas" {% if prioridade_filtro =="todas" or not prioridade_filtro %}selected{% endif %}>Todas</option>
+                <option value="alta" {% if prioridade_filtro =="alta" %}selected{% endif %}>Alta</option>
+                <option value="media" {% if prioridade_filtro =="media" or prioridade_filtro =="média" %}selected{% endif %}>Média</option>
+                <option value="baixa" {% if prioridade_filtro =="baixa" %}selected{% endif %}>Baixa</option>
             </select>
         </form>
         <a href="/nova_demanda" class="button-link">+ Nova Demanda</a>
