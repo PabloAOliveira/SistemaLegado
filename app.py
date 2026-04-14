@@ -65,19 +65,30 @@ def date_now():
 
 @app.route('/', methods=['GET'])
 def index():
-    demandas = fetch_all("""
-                         SELECT *
-                         FROM demandas
-                         ORDER BY CASE LOWER(prioridade)
-                                      WHEN 'alta' THEN 1
-                                      WHEN 'média' THEN 2
-                                      WHEN 'media' THEN 2
-                                      WHEN 'baixa' THEN 3
-                                      ELSE 4
-                                      END,
-                                  data_criacao DESC
-                         """)
-    return render_template('index.html', demandas=demandas)
+    prioridade_filtro = request.args.get('prioridade', 'todas').strip().lower()
+    
+    if prioridade_filtro == 'todas' or not prioridade_filtro:
+        demandas = fetch_all("""
+                             SELECT *
+                             FROM demandas
+                             ORDER BY CASE LOWER(prioridade)
+                                          WHEN 'alta' THEN 1
+                                          WHEN 'média' THEN 2
+                                          WHEN 'media' THEN 2
+                                          WHEN 'baixa' THEN 3
+                                          ELSE 4
+                                          END,
+                                      data_criacao DESC
+                             """)
+    else:
+        demandas = fetch_all("""
+                             SELECT *
+                             FROM demandas
+                             WHERE LOWER(prioridade) = ?
+                             ORDER BY data_criacao DESC
+                             """, (prioridade_filtro,))
+    
+    return render_template('index.html', demandas=demandas, prioridade_filtro=prioridade_filtro)
 
 @app.route('/nova_demanda', methods=['GET', 'POST'])
 def nova_demanda():

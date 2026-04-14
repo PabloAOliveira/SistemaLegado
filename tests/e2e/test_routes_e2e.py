@@ -99,6 +99,24 @@ def test_buscar_filtra_por_titulo(client):
     assert b"Implementar relatorio de vendas" not in response.data
 
 
+def test_index_filtra_por_prioridade(client):
+    response = client.get("/?prioridade=alta")
+
+    assert response.status_code == 200
+    assert b"Corrigir bug no login" in response.data
+    assert b"Implementar relat" not in response.data
+
+
+def test_index_sem_filtro_mostra_todas_ordenadas(client):
+    response = client.get("/")
+
+    assert response.status_code == 200
+    data = response.data.decode('utf-8')
+    alta_pos = data.find("Corrigir bug no login")
+    media_pos = data.find("Implementar relat")
+    assert alta_pos < media_pos
+
+
 def test_detalhes_exibe_demanda_e_comentarios(client):
     response = client.get("/detalhes/1")
 

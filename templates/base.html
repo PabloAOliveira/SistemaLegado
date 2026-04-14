@@ -1,39 +1,105 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SGDI - Sistema de Gestão de Demandas</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        body { margin: 0; }
-    </style>
 </head>
 <body>
-    <div class="header">
-        <h1>SGDI</h1>
-        <div class="menu">
-            <a href="/">Início</a>
-            <a href="/nova_demanda">Nova Demanda</a>
-            <form action="/buscar" method="GET" style="display:inline;">
-                <input type="text" name="q" placeholder="Buscar">
-                <button type="submit">Buscar</button>
-            </form>
+    <header class="header glass-panel">
+        <div class="header-inner">
+            <h1><a href="{{ url_for('index') }}" aria-label="Ir para página inicial">SGDI</a></h1>
+            <div class="menu">
+                <form action="/buscar" method="GET" class="search-form">
+                    <input type="text" name="q" placeholder="Buscar">
+                    <button type="submit">Buscar</button>
+                </form>
+                <button id="theme-toggle" type="button" class="theme-toggle" aria-label="Alternar tema">Tema</button>
+            </div>
         </div>
-    </div>
+    </header>
 
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert">{{ message }}</div>
-            {% endfor %}
+    {% with flashes = get_flashed_messages(with_categories=true) %}
+        {% if flashes %}
+            <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="true">
+                {% for category, message in flashes %}
+                    <div class="toast toast-{{ category|default('message') }}" role="status">
+                        <span class="toast-text">{{ message }}</span>
+                        <button type="button" class="toast-close" aria-label="Fechar mensagem">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
         {% endif %}
     {% endwith %}
 
-    <div class="container">
+    <main class="container glass-panel">
         {% block content %}{% endblock %}
-    </div>
+    </main>
 
-    <div class="footer">
+    <footer class="footer glass-panel">
         <p>SGDI v1.0 - 2024</p>
-    </div>
+    </footer>
+
+    <script>
+        (function() {
+            var root = document.body;
+            var toggle = document.getElementById('theme-toggle');
+            var storedTheme = localStorage.getItem('sgdi-theme');
+            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var currentTheme = storedTheme || (prefersDark ? 'dark' : 'light');
+
+            function applyTheme(theme) {
+                root.setAttribute('data-theme', theme);
+                if (toggle) {
+                    toggle.textContent = theme === 'dark' ? 'Tema claro' : 'Tema escuro';
+                }
+            }
+
+            applyTheme(currentTheme);
+
+            if (toggle) {
+                toggle.addEventListener('click', function() {
+                    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    localStorage.setItem('sgdi-theme', currentTheme);
+                    applyTheme(currentTheme);
+                });
+            }
+
+            var stack = document.getElementById('toast-stack');
+            if (stack) {
+                var toasts = stack.querySelectorAll('.toast');
+
+                function dismissToast(toast) {
+                    toast.classList.add('toast-hide');
+                    setTimeout(function() {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                        if (!stack.querySelector('.toast')) {
+                            stack.parentNode.removeChild(stack);
+                        }
+                    }, 260);
+                }
+
+                Array.prototype.forEach.call(toasts, function(toast, index) {
+                    setTimeout(function() {
+                        toast.classList.add('toast-show');
+                    }, index * 60);
+
+                    var closeBtn = toast.querySelector('.toast-close');
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', function() {
+                            dismissToast(toast);
+                        });
+                    }
+
+                    setTimeout(function() {
+                        dismissToast(toast);
+                    }, 3800 + (index * 120));
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

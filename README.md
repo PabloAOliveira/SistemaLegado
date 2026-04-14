@@ -44,14 +44,18 @@ pytest --cov=. --cov-report=xml --cov-report=term-missing
 - Deletar demandas
 - Visualizar detalhes
 - Comentários
+- Classificação por prioridade (alta, média, baixa)
+- Filtros por prioridade
+- Ordenação automática por prioridade
 
 ---
 
 **TODO:**
-- Adicionar prioridades
 - Melhorar busca
 - Adicionar usuários
 
 ---
+
+.\.venv\Scripts\python.exe app.py
 
 *Desenvolvido em 2026*
