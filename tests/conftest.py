@@ -1,7 +1,11 @@
 import sqlite3
+import sys
 from pathlib import Path
 
 import pytest
+
+# Adiciona o diretório raiz ao PYTHONPATH para importar app.py
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import app as app_module
 

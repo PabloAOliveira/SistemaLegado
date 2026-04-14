@@ -2,8 +2,11 @@ import os
 import sqlite3
 import secrets
 import datetime
+from contextlib import closing
 from flask import Flask, flash, redirect, render_template, request, url_for
+from flask_migrate import Migrate
 from dotenv import load_dotenv
+from models import db
 
 app = Flask(__name__)
 load_dotenv()
@@ -21,9 +24,16 @@ if not flask_secret_key:
 app.secret_key = flask_secret_key
 DATABASE_PATH = os.getenv('DATABASE_PATH', 'demandas.db')
 
+database_path_abs = os.path.abspath(DATABASE_PATH)
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{database_path_abs}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+migrate = Migrate(app, db)
+
 
 def get_db():
-    return sqlite3.connect(DATABASE_PATH)
+    return closing(sqlite3.connect(DATABASE_PATH))
 
 
 def fetch_all(query, params=()):
@@ -55,19 +65,30 @@ def date_now():
 
 @app.route('/', methods=['GET'])
 def index():
-    demandas = fetch_all("""
-                         SELECT *
-                         FROM demandas
-                         ORDER BY CASE LOWER(prioridade)
-                                      WHEN 'alta' THEN 1
-                                      WHEN 'média' THEN 2
-                                      WHEN 'media' THEN 2
-                                      WHEN 'baixa' THEN 3
-                                      ELSE 4
-                                      END,
-                                  data_criacao DESC
-                         """)
-    return render_template('index.html', demandas=demandas)
+    prioridade_filtro = request.args.get('prioridade', 'todas').strip().lower()
+    
+    if prioridade_filtro == 'todas' or not prioridade_filtro:
+        demandas = fetch_all("""
+                             SELECT *
+                             FROM demandas
+                             ORDER BY CASE LOWER(prioridade)
+                                          WHEN 'alta' THEN 1
+                                          WHEN 'média' THEN 2
+                                          WHEN 'media' THEN 2
+                                          WHEN 'baixa' THEN 3
+                                          ELSE 4
+                                          END,
+                                      data_criacao DESC
+                             """)
+    else:
+        demandas = fetch_all("""
+                             SELECT *
+                             FROM demandas
+                             WHERE LOWER(prioridade) = ?
+                             ORDER BY data_criacao DESC
+                             """, (prioridade_filtro,))
+    
+    return render_template('index.html', demandas=demandas, prioridade_filtro=prioridade_filtro)
 
 @app.route('/nova_demanda', methods=['GET', 'POST'])
 def nova_demanda():

@@ -20,14 +20,26 @@ docker run -d --name sonarqube -p 9000:9000 sonarqube:lts-community
 
 Acesse: `http://localhost:9000`
 
+### Gerar relatório de cobertura (pytest-cov)
+
+Antes de rodar o SonarQube, gere o relatório de cobertura:
+
+```powershell
+pytest --cov=. --cov-report=xml --cov-report=term-missing
+```
+
+Isso gera `coverage.xml` que o SonarQube vai ler.
+
 ### Rodar análise com sonar-scanner
 
 No diretório raiz do projeto:
 
 ```powershell
 $env:SONAR_TOKEN="SEU_TOKEN"
-sonar-scanner -Dsonar.projectKey=sistema-legado -Dsonar.projectName="SistemaLegado" -Dsonar.sources=. -Dsonar.host.url=http://localhost:9000 -Dsonar.login=$env:SONAR_TOKEN
+sonar-scanner -Dsonar.host.url=http://localhost:9000 -Dsonar.login=$env:SONAR_TOKEN
 ```
+
+**Nota:** Os parâmetros agora vêm do `sonar-project.properties` (que inclui coverage).
 
 ## 2) Qodana
 
@@ -49,8 +61,9 @@ qodana scan --project-dir . --config qodana.yaml
 
 ## 3) Pipeline recomendada
 
-1. Executar testes automatizados (`pytest`).
-2. Rodar SonarQube para métricas e quality gate.
-3. Rodar Qodana para inspeções estáticas adicionais.
-4. Bloquear merge se houver falha no quality gate.
+1. Executar testes com cobertura (`pytest --cov`).
+2. Gerar relatório de cobertura (`coverage.xml`).
+3. Rodar SonarQube para métricas, quality gate e análise de cobertura.
+4. Rodar Qodana para inspeções estáticas adicionais.
+5. Bloquear merge se houver falha no quality gate.
 

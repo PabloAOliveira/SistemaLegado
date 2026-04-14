@@ -1,5 +1,9 @@
 import sqlite3
 from pathlib import Path
+from contextlib import closing
+
+def get_db(db_path: Path):
+    return closing(sqlite3.connect(str(db_path)))
 
 
 def test_index_lista_demandas(client):
@@ -32,7 +36,7 @@ def test_nova_demanda_post_cria_registro_e_redireciona(client, db_path: Path):
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/")
 
-    with sqlite3.connect(str(db_path)) as conn:
+    with get_db(db_path) as conn:
         cursor = conn.cursor()
         created = cursor.execute(
             "SELECT titulo, descricao, solicitante, prioridade FROM demandas WHERE titulo = ?",
@@ -65,7 +69,7 @@ def test_editar_post_atualiza_demanda_e_redireciona(client, db_path: Path):
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/")
 
-    with sqlite3.connect(str(db_path)) as conn:
+    with get_db(db_path) as conn:
         cursor = conn.cursor()
         updated = cursor.execute(
             "SELECT titulo, descricao, solicitante, prioridade FROM demandas WHERE id = 1"
@@ -80,7 +84,7 @@ def test_deletar_remove_demanda_e_redireciona(client, db_path: Path):
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/")
 
-    with sqlite3.connect(str(db_path)) as conn:
+    with get_db(db_path) as conn:
         cursor = conn.cursor()
         deleted = cursor.execute("SELECT id FROM demandas WHERE id = 2").fetchone()
 
@@ -93,6 +97,24 @@ def test_buscar_filtra_por_titulo(client):
     assert response.status_code == 200
     assert b"Corrigir bug no login" in response.data
     assert b"Implementar relatorio de vendas" not in response.data
+
+
+def test_index_filtra_por_prioridade(client):
+    response = client.get("/?prioridade=alta")
+
+    assert response.status_code == 200
+    assert b"Corrigir bug no login" in response.data
+    assert b"Implementar relat" not in response.data
+
+
+def test_index_sem_filtro_mostra_todas_ordenadas(client):
+    response = client.get("/")
+
+    assert response.status_code == 200
+    data = response.data.decode('utf-8')
+    alta_pos = data.find("Corrigir bug no login")
+    media_pos = data.find("Implementar relat")
+    assert alta_pos < media_pos
 
 
 def test_detalhes_exibe_demanda_e_comentarios(client):
@@ -113,7 +135,7 @@ def test_adicionar_comentario_cria_registro_e_redireciona(client, db_path: Path)
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/detalhes/1")
 
-    with sqlite3.connect(str(db_path)) as conn:
+    with get_db(db_path) as conn:
         cursor = conn.cursor()
         comment = cursor.execute(
             "SELECT autor, comentario FROM comentarios WHERE demanda_id = 1 AND autor = ?",
