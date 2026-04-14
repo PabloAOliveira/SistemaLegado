@@ -4,7 +4,7 @@
 03/04/2026
 
 ## Status
-Proposto
+Aceito
 
 ## Contexto
 A adicao da coluna `prioridade` (commit `b2c6eaa`) gerou quebra para quem ja tinha `demandas.db` sem a coluna. Hoje, sem trilha de migracao versionada, a solucao vira apagar banco local, o que perde dados e dificulta colaboracao.
