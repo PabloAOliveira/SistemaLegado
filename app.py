@@ -171,6 +171,11 @@ def detalhes(demanda_id):
     return render_template('detalhes.html', demanda=demanda, comentarios=comentarios)
 
 
+@app.route('/solicitante', methods=['GET'])
+def solicitante():
+    return render_template('solicitante.html')
+
+
 @app.route('/adicionar_comentario/<int:demanda_id>', methods=['POST'])
 def adicionar_comentario(demanda_id):
     comentario = request.form['comentario']

@@ -21,6 +21,20 @@ def test_nova_demanda_get_exibe_formulario(client):
     assert b"Nova Demanda" in response.data
 
 
+def test_header_contem_link_para_solicitante(client):
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert b'href="/solicitante"' in response.data
+
+
+def test_solicitante_get_exibe_pagina(client):
+    response = client.get("/solicitante")
+
+    assert response.status_code == 200
+    assert b"Solicitante" in response.data
+
+
 def test_nova_demanda_post_cria_registro_e_redireciona(client, db_path: Path):
     response = client.post(
         "/nova_demanda",
