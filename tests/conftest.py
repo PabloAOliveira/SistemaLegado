@@ -77,7 +77,11 @@ def client(db_path: Path, monkeypatch: pytest.MonkeyPatch):
         return original_connect(str(db_path), *args, **kwargs)
 
     monkeypatch.setattr(app_module.sqlite3, "connect", connect_override)
-    app_module.app.config.update(TESTING=True, SECRET_KEY="test-secret-key")
+    app_module.app.config.update(
+        TESTING=True,
+        SECRET_KEY="test-secret-key",
+        REQUESTERS=[dict(requester) for requester in app_module.DEFAULT_REQUESTERS],
+    )
 
     with app_module.app.test_client() as test_client:
         yield test_client

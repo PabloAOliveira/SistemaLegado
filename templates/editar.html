@@ -3,40 +3,41 @@
 {% block content %}
 <h2>Editar Demanda</h2>
 
-
 <div class="demanda-form-scroll">
 <form id="form-editar-demanda" method="POST" action="/editar/{{ demanda[0] }}" class="form-card glass-panel-soft">
     <div class="form-field">
-        <label for="titulo">Título:</label>
-        <input id="titulo" type="text" name="titulo" value="{{ demanda[1] }}" size="50" required>
+        <label for="titulo">Titulo:</label>
+        <input id="titulo" type="text" name="titulo" value="{{ form_data.get('titulo', demanda[1]) }}" size="50" required>
     </div>
 
     <div class="form-field">
-        <label for="descricao">Descrição:</label>
-        <textarea id="descricao" name="descricao" rows="5" cols="50" required>{{ demanda[2] }}</textarea>
+        <label for="descricao">Descricao:</label>
+        <textarea id="descricao" name="descricao" rows="5" cols="50" required>{{ form_data.get('descricao', demanda[2]) }}</textarea>
     </div>
 
     <div class="form-field">
         <label for="solicitante">Solicitante:</label>
-        <input id="solicitante" type="text" name="solicitante" value="{{ demanda[3] }}" required>
-    </div>
-
-    <div class="form-field">
-        <label for="prioridade">Prioridade:</label>
-
-        {% set p = demanda[4]|lower if demanda[4] else '' %}
-
-        <select id="prioridade" name="prioridade" required>
-            <option value="alta" {% if p =="alta" %}selected{% endif %}>Alta</option>
-
-            <option value="media" {% if p =="media" or p =="média" %}selected{% endif %}>Média</option>
-
-            <option value="baixa" {% if p =="baixa" %}selected{% endif %}>Baixa</option>
+        {% set selected_solicitante = form_data.get('solicitante', demanda[3]) %}
+        <select id="solicitante" name="solicitante" required>
+            <option value="">Selecione um solicitante</option>
+            {% for person in people %}
+            <option value="{{ person }}" {% if selected_solicitante == person %}selected{% endif %}>{{ person }}</option>
+            {% endfor %}
         </select>
     </div>
 
     <div class="form-field">
-        <label for="data-criacao">Data de Criação:</label>
+        <label for="prioridade">Prioridade:</label>
+        {% set p = form_data.get('prioridade', demanda[4])|lower if form_data.get('prioridade', demanda[4]) else '' %}
+        <select id="prioridade" name="prioridade" required>
+            <option value="alta" {% if p == "alta" %}selected{% endif %}>Alta</option>
+            <option value="media" {% if p == "media" or p == "mÃ©dia" %}selected{% endif %}>Media</option>
+            <option value="baixa" {% if p == "baixa" %}selected{% endif %}>Baixa</option>
+        </select>
+    </div>
+
+    <div class="form-field">
+        <label for="data-criacao">Data de Criacao:</label>
         {% set data = demanda[5].split(' ') %}
         {% set date_parts = data[0].split('-') %}
         <input id="data-criacao" type="text" value="{{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}" disabled>
