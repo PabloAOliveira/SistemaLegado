@@ -19,6 +19,7 @@ def test_nova_demanda_get_exibe_formulario(client):
 
     assert response.status_code == 200
     assert b"Nova Demanda" in response.data
+    assert b'<select name="solicitante"' in response.data
 
 
 def test_header_contem_link_para_solicitante(client):
@@ -33,6 +34,50 @@ def test_solicitante_get_exibe_pagina(client):
 
     assert response.status_code == 200
     assert b"Solicitante" in response.data
+    assert b"Cadastrar" in response.data
+
+
+def test_cadastrar_solicitante_get_exibe_formulario(client):
+    response = client.get("/solicitante/cadastrar")
+
+    assert response.status_code == 200
+    assert b"Cadastrar Solicitante" in response.data
+    assert b'name="nome"' in response.data
+    assert b'name="email"' in response.data
+    assert b'name="cargo"' in response.data
+
+
+def test_cadastrar_solicitante_post_adiciona_nome_na_lista(client):
+    response = client.post(
+        "/solicitante/cadastrar",
+        data={
+            "nome": "Ana Lima",
+            "email": "ana.lima@empresa.com",
+            "cargo": "Gerente",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/solicitante")
+
+    nova_demanda = client.get("/nova_demanda")
+    assert b"Ana Lima" in nova_demanda.data
+
+
+def test_cadastrar_solicitante_post_com_campo_vazio_retorna_erro(client):
+    response = client.post(
+        "/solicitante/cadastrar",
+        data={
+            "nome": "Ana Lima",
+            "email": "",
+            "cargo": "Gerente",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    assert b"Preencha nome, email e cargo para cadastrar!" in response.data
 
 
 def test_nova_demanda_post_cria_registro_e_redireciona(client, db_path: Path):
@@ -66,6 +111,7 @@ def test_editar_get_exibe_demanda(client):
     assert response.status_code == 200
     assert b"Editar Demanda" in response.data
     assert b"Corrigir bug no login" in response.data
+    assert b'<select id="solicitante"' in response.data
 
 
 def test_editar_post_atualiza_demanda_e_redireciona(client, db_path: Path):
@@ -137,12 +183,13 @@ def test_detalhes_exibe_demanda_e_comentarios(client):
     assert response.status_code == 200
     assert b"Detalhes da Demanda #1" in response.data
     assert b"Vou investigar esse bug" in response.data
+    assert b'<select name="autor"' in response.data
 
 
 def test_adicionar_comentario_cria_registro_e_redireciona(client, db_path: Path):
     response = client.post(
         "/adicionar_comentario/1",
-        data={"autor": "QA", "comentario": "Fluxo validado em e2e"},
+        data={"autor": "Tech Team", "comentario": "Fluxo validado em e2e"},
         follow_redirects=False,
     )
 
@@ -153,8 +200,28 @@ def test_adicionar_comentario_cria_registro_e_redireciona(client, db_path: Path)
         cursor = conn.cursor()
         comment = cursor.execute(
             "SELECT autor, comentario FROM comentarios WHERE demanda_id = 1 AND autor = ?",
-            ("QA",),
+            ("Tech Team",),
         ).fetchone()
 
-    assert comment == ("QA", "Fluxo validado em e2e")
+    assert comment == ("Tech Team", "Fluxo validado em e2e")
+
+
+def test_adicionar_comentario_vazio_retorna_erro_e_nao_grava(client, db_path: Path):
+    response = client.post(
+        "/adicionar_comentario/1",
+        data={"autor": "Tech Team", "comentario": "   "},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    assert b'Escreva um comentario antes de enviar!' in response.data
+
+    with get_db(db_path) as conn:
+        cursor = conn.cursor()
+        comment = cursor.execute(
+            "SELECT autor, comentario FROM comentarios WHERE demanda_id = 1 AND comentario = ?",
+            ("   ",),
+        ).fetchone()
+
+    assert comment is None
 
