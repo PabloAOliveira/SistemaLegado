@@ -5,33 +5,37 @@
 
 <form id="form-nova-demanda" method="POST" action="/nova_demanda" class="form-card glass-panel-soft">
     <div class="form-field">
-        <label>Titulo:</label><br>
-        <input type="text" name="titulo" value="{{ form_data.get('titulo', '') }}" size="50" required>
+        <label>Titulo:<br>
+            <input type="text" name="titulo" value="{{ form_data.get('titulo', '') }}" size="50" required>
+        </label>
     </div>
 
     <div class="form-field">
-        <label>Descricao:</label><br>
+        <label>Descrição:<br>
         <textarea name="descricao" rows="5" cols="50" required>{{ form_data.get('descricao', '') }}</textarea>
+        </label>
     </div>
 
     <div class="form-field">
-        <label>Solicitante:</label><br>
-        <select name="solicitante" required>
-            <option value="">Selecione um solicitante</option>
-            {% for person in people %}
-            <option value="{{ person }}" {% if form_data.get('solicitante') == person %}selected{% endif %}>{{ person }}</option>
-            {% endfor %}
-        </select>
+        <label>Solicitante:<br>
+            <select name="solicitante" required>
+                <option value="">Selecione um solicitante</option>
+                {% for person in people %}
+                <option value="{{ person }}" {% if form_data.get('solicitante') == person %}selected{% endif %}>{{ person }}</option>
+                {% endfor %}
+            </select>
+        </label>
     </div>
 
     <div class="form-field">
-        <label>Prioridade:</label><br>
-        {% set selected_prioridade = form_data.get('prioridade', 'baixa') %}
-        <select name="prioridade" required>
-            <option value="baixa" {% if selected_prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
-            <option value="media" {% if selected_prioridade == 'media' %}selected{% endif %}>Media</option>
-            <option value="alta" {% if selected_prioridade == 'alta' %}selected{% endif %}>Alta</option>
-        </select>
+        <label>Prioridade:<br>
+            {% set selected_prioridade = form_data.get('prioridade', 'baixa') %}
+            <select name="prioridade" required>
+                <option value="baixa" {% if selected_prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
+                <option value="media" {% if selected_prioridade == 'media' %}selected{% endif %}>Media</option>
+                <option value="alta" {% if selected_prioridade == 'alta' %}selected{% endif %}>Alta</option>
+            </select>
+        </label>
     </div>
 
     <div class="form-actions">
@@ -56,10 +60,10 @@ document.getElementById('form-nova-demanda').addEventListener('submit', function
 
         if (!titulo) {
             tituloInput.focus();
-        } else if (!descricao) {
-            descricaoInput.focus();
-        } else {
+        } else if (descricao) {
             solicitanteInput.focus();
+        } else {
+            descricaoInput.focus();
         }
     }
 });

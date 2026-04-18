@@ -27,13 +27,13 @@
 
 <script>
 document.getElementById('form-cadastrar-solicitante').addEventListener('submit', function (event) {
-    var nomeInput = this.querySelector('input[name="nome"]');
-    var emailInput = this.querySelector('input[name="email"]');
-    var cargoInput = this.querySelector('input[name="cargo"]');
+    const nomeInput = this.querySelector('input[name="nome"]');
+    const emailInput = this.querySelector('input[name="email"]');
+    const cargoInput = this.querySelector('input[name="cargo"]');
 
-    var nome = (nomeInput.value || '').trim();
-    var email = (emailInput.value || '').trim();
-    var cargo = (cargoInput.value || '').trim();
+    const nome = (nomeInput.value || '').trim();
+    const email = (emailInput.value || '').trim();
+    const cargo = (cargoInput.value || '').trim();
 
     if (!nome || !email || !cargo) {
         event.preventDefault();
@@ -41,10 +41,10 @@ document.getElementById('form-cadastrar-solicitante').addEventListener('submit',
 
         if (!nome) {
             nomeInput.focus();
-        } else if (!email) {
-            emailInput.focus();
-        } else {
+        } else if (email) {
             cargoInput.focus();
+        } else {
+            emailInput.focus();
         }
     }
 });
