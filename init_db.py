@@ -16,6 +16,14 @@ SEED_COMENTARIOS = [
     (3, 99, 'Este comentario esta orfao', 'Usuario', '2024-01-16 10:00:00'),
 ]
 
+SEED_REQUESTERS = [
+    ('Joao Silva', 'joao.silva@empresa.com', 'Analista', '2024-01-15 09:00:00'),
+    ('Maria Santos', 'maria.santos@empresa.com', 'Coordenadora', '2024-01-15 09:05:00'),
+    ('Tech Team', 'tech.team@empresa.com', 'Equipe Tecnica', '2024-01-15 09:10:00'),
+    ('Equipe Suporte', 'suporte@empresa.com', 'Suporte', '2024-01-15 09:15:00'),
+    ('Time Produto', 'produto@empresa.com', 'Produto', '2024-01-15 09:20:00'),
+]
+
 def run_migrations_and_seed() -> None:
     with app.app_context():
         print("Rodando migrações...")
@@ -27,6 +35,7 @@ def run_migrations_and_seed() -> None:
         print("Limpando dados antigos...")
         db.session.execute(text('DELETE FROM comentarios'))
         db.session.execute(text('DELETE FROM demandas'))
+        db.session.execute(text('DELETE FROM requesters'))
 
         print("Inserindo demandas iniciais...")
         for demanda in SEED_DEMANDAS:
@@ -60,6 +69,22 @@ def run_migrations_and_seed() -> None:
                     'comentario': comentario[2],
                     'autor': comentario[3],
                     'data': comentario[4],
+                },
+            )
+
+        print("Inserindo solicitantes...")
+        for requester in SEED_REQUESTERS:
+            db.session.execute(
+                text(
+                    'INSERT INTO requesters '
+                    '(nome, email, cargo, data_criacao) '
+                    'VALUES (:nome, :email, :cargo, :data_criacao)'
+                ),
+                {
+                    'nome': requester[0],
+                    'email': requester[1],
+                    'cargo': requester[2],
+                    'data_criacao': requester[3],
                 },
             )
 
