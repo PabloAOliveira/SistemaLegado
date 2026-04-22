@@ -189,6 +189,7 @@ def editar(demanda_id):
             flash('Erro ao atualizar demanda!')
             return redirect(url_for('editar', demanda_id=demanda_id))
 
+        flash('Atualizado!')
         return redirect(url_for('index'))
 
     demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
@@ -214,8 +215,11 @@ def buscar():
     like_term = f"%{termo}%"
 
     resultados = fetch_all(
-        'SELECT * FROM demandas WHERE titulo LIKE ?',
-        (like_term,),
+        '''SELECT * FROM demandas 
+           WHERE titulo LIKE ? 
+           OR id LIKE ?
+           OR solicitante LIKE ?''',
+        (like_term, like_term, like_term),
     )
     return render_template('index.html', demandas=resultados)
 
