@@ -5,30 +5,34 @@
 
 <form id="form-nova-demanda" method="POST" action="/nova_demanda" class="form-card glass-panel-soft">
     <div class="form-field">
-        <label>Título:</label><br>
-        <input type="text" name="titulo" size="50" required>
+        <label>Titulo:</label><br>
+        <input type="text" name="titulo" value="{{ form_data.get('titulo', '') }}" size="50" required>
     </div>
 
     <div class="form-field">
-        <label>Descrição:</label><br>
-        <textarea name="descricao" rows="5" cols="50" required></textarea>
+        <label>Descricao:</label><br>
+        <textarea name="descricao" rows="5" cols="50" required>{{ form_data.get('descricao', '') }}</textarea>
     </div>
 
     <div class="form-field">
         <label>Solicitante:</label><br>
-        <input type="text" name="solicitante" required>
+        <select name="solicitante" required>
+            <option value="">Selecione um solicitante</option>
+            {% for person in people %}
+            <option value="{{ person }}" {% if form_data.get('solicitante') == person %}selected{% endif %}>{{ person }}</option>
+            {% endfor %}
+        </select>
     </div>
 
     <div class="form-field">
         <label>Prioridade:</label><br>
+        {% set selected_prioridade = form_data.get('prioridade', 'baixa') %}
         <select name="prioridade" required>
-            <option value="baixa">Baixa</option>
-            <option value="media">Média</option>
-            <option value="alta">Alta</option>
+            <option value="baixa" {% if selected_prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
+            <option value="media" {% if selected_prioridade == 'media' %}selected{% endif %}>Media</option>
+            <option value="alta" {% if selected_prioridade == 'alta' %}selected{% endif %}>Alta</option>
         </select>
     </div>
-
-
 
     <div class="form-actions">
         <button type="submit">Salvar</button>
@@ -40,7 +44,7 @@
 document.getElementById('form-nova-demanda').addEventListener('submit', function (event) {
     var tituloInput = this.querySelector('input[name="titulo"]');
     var descricaoInput = this.querySelector('textarea[name="descricao"]');
-    var solicitanteInput = this.querySelector('input[name="solicitante"]');
+    var solicitanteInput = this.querySelector('select[name="solicitante"]');
 
     var titulo = (tituloInput.value || '').trim();
     var descricao = (descricaoInput.value || '').trim();
