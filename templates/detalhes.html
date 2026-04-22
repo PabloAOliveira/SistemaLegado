@@ -7,12 +7,12 @@
 
 <div class="details-card glass-panel-soft">
     <h3>{{ demanda[1] }}</h3>
-    <p><strong>Descrição:</strong></p>
+    <p><strong>Descricao:</strong></p>
     <p>{{ demanda[2] }}</p>
 
     <p><strong>Solicitante:</strong> {{ demanda[3] }}</p>
     <p><strong>Prioridade:</strong> {{ demanda[4] }}</p>
-    <p><strong>Data de Criação:</strong>
+    <p><strong>Data de Criacao:</strong>
         {% set data = demanda[5].split(' ') %}
         {% set date_parts = data[0].split('-') %}
         {{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}
@@ -24,7 +24,7 @@
     </div>
 </div>
 
-<h3>Comentários</h3>
+<h3>Comentarios</h3>
 
 {% for comentario in comentarios %}
 <div class="comment-card glass-panel-soft">
@@ -37,20 +37,38 @@
 </div>
 {% endfor %}
 
-<h4>Adicionar Comentário</h4>
-<form method="POST" action="/adicionar_comentario/{{ demanda[0] }}" class="form-card glass-panel-soft">
+<h4>Adicionar Comentario</h4>
+<form id="form-adicionar-comentario" method="POST" action="/adicionar_comentario/{{ demanda[0] }}" class="form-card glass-panel-soft">
     <div class="form-field">
         <label>Seu nome:</label><br>
-        <input type="text" name="autor" size="30">
+        <select name="autor" required>
+            <option value="">Selecione seu nome</option>
+            {% for person in people %}
+            <option value="{{ person }}" {% if form_data.get('autor') == person %}selected{% endif %}>{{ person }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="form-field">
-        <label>Comentário:</label><br>
-        <textarea name="comentario" rows="4" cols="50"></textarea>
+        <label>Comentario:</label><br>
+        <textarea name="comentario" rows="4" cols="50" required>{{ form_data.get('comentario', '') }}</textarea>
     </div>
     <div class="form-actions">
-        <button type="submit">Enviar Comentário</button>
+        <button type="submit">Enviar Comentario</button>
     </div>
 </form>
+
+<script>
+document.getElementById('form-adicionar-comentario').addEventListener('submit', function (event) {
+    var comentarioInput = this.querySelector('textarea[name="comentario"]');
+    var comentario = (comentarioInput.value || '').trim();
+
+    if (!comentario) {
+        event.preventDefault();
+        alert('Escreva um comentario antes de enviar.');
+        comentarioInput.focus();
+    }
+});
+</script>
 
 </div>
 

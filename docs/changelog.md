@@ -128,6 +128,24 @@ Este bloco resume as mudancas introduzidas pela Maria no projeto.
 - `422f353`: documentacao tecnica e quality gate.
 - `b2c6eaa`: adicao de `prioridade` (motivando ADR de migracoes).
 
+## 2026-04-08 - Enzo Almeida
+
+### Frontend (`templates/nova_demanda.html`)
+
+- Validacao no formulario de criacao de demanda para impedir salvar sem preencher:
+  - `titulo`, `descricao` e `solicitante` (campos marcados como `required`).
+  - Bloqueio do submit quando o valor for apenas espacos (trim) com aviso via `alert` e foco no primeiro campo faltante.
+
+### Dependencias
+
+- `requirements.txt` atualizado.
+- `requirements-test.txt` ajustado para `pytest==6.2.5`.
+- Adicionado `requirements-freeze.txt`.
+
+### Commits relacionados
+
+- `f780d02`: `Valida titulo, descricao e solicitante no front-end`
+
 ## 2026-04-07 - Higor Milani
 
 ### Migracoes de banco (Flask-Migrate)
@@ -141,4 +159,28 @@ Este bloco resume as mudancas introduzidas pela Maria no projeto.
 - `init_db.py` foi alterado para:
   - aplicar `db upgrade` via Flask-Migrate.
   - popular seed de forma idempotente (`INSERT OR IGNORE`).
+
+## 2026-04-14 - Enzo Almeida
+
+### Solicitantes e comentarios
+
+- Campo `Solicitante` das telas de nova demanda e edicao foi trocado de texto livre para dropdown.
+- Campo de autor do comentario na tela de detalhes tambem passou a usar dropdown.
+- Comentarios agora exigem texto obrigatorio no frontend e no backend antes do envio.
+
+### Cadastro de solicitantes
+
+- Pagina `Solicitante` deixou de ser placeholder e passou a listar os solicitantes disponiveis.
+- Adicionada rota `/solicitante/cadastrar` com formulario para:
+  - `nome`
+  - `email`
+  - `cargo`
+- Os tres campos do cadastro sao obrigatorios.
+- Novo cadastro alimenta a lista em memoria usada pelos dropdowns da aplicacao.
+
+### Backend e testes
+
+- `DEFAULT_PEOPLE` foi substituido por estrutura de solicitantes completos (`DEFAULT_REQUESTERS`).
+- Criados helpers para expor nomes disponiveis e manter a lista de solicitantes carregada na aplicacao.
+- Testes E2E e fixtures foram atualizados para cobrir dropdowns, validacao de comentario e cadastro de solicitante.
 
