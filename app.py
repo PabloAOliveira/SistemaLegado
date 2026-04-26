@@ -266,7 +266,24 @@ def detalhes(demanda_id):
 
 @app.route('/solicitante', methods=['GET'])
 def solicitante():
-    return render_template('solicitante.html', requesters=get_requesters())
+    requesters = get_requesters()
+    
+    # Count de chamados por solicitante
+    dados = fetch_all("""
+        SELECT solicitante, COUNT(*) as total
+        FROM demandas
+        GROUP BY solicitante
+        ORDER BY total DESC
+    """)
+    
+    # Formata para o gráfico
+    categorias = [row[0] for row in dados]
+    totais = [row[1] for row in dados]
+    
+    return render_template('solicitante.html', 
+                         requesters=requesters,
+                         categorias=categorias,
+                         totais=totais)
 
 
 @app.route('/solicitante/cadastrar', methods=['GET', 'POST'])

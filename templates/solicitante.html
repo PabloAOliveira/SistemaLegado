@@ -1,35 +1,87 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Solicitante</h2>
-
-<div class="glass-panel-soft" style="padding: 16px;">
-    <div class="page-actions" style="margin-bottom: 16px;">
+<!-- Cabeçalho com Título e Botões -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h2 style="margin: 0;">Solicitante</h2>
+    <div class="page-actions">
         <a href="{{ url_for('cadastrar_solicitante') }}" class="button-link">Cadastrar</a>
         <a href="{{ url_for('index') }}" class="button-link button-link-muted">Voltar</a>
     </div>
-
-    {% if requesters %}
-    <table class="table-demandas">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Cargo</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for requester in requesters %}
-            <tr>
-                <td>{{ requester['nome'] }}</td>
-                <td>{{ requester['email'] }}</td>
-                <td>{{ requester['cargo'] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>Nenhum solicitante cadastrado.</p>
-    {% endif %}
 </div>
+
+<!-- Container com scroll que engloba gráfico e tabela -->
+<div style="overflow-y: auto; height: calc(100vh - 150px); padding: 0;">
+    <!-- Container do Gráfico -->
+    <div class="glass-panel-soft" style="padding: 16px; margin-bottom: 20px;">
+        <!-- Gráfico de Chamados por Solicitante -->
+        <div id="container" style="margin-bottom: 0; height: 350px;"></div>
+        
+        <!-- Dados para o gráfico -->
+        <script id="data" type="application/json">
+        {
+            "categories": {{ categorias | tojson }},
+            "data": {{ totais | tojson }}
+        }
+        </script>
+    </div>
+
+    <!-- Container da Tabela -->
+    <div class="glass-panel-soft" style="padding: 16px; margin-top: 0;">
+        {% if requesters %}
+        <table class="table-demandas">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Cargo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for requester in requesters %}
+                <tr>
+                    <td>{{ requester['nome'] }}</td>
+                    <td>{{ requester['email'] }}</td>
+                    <td>{{ requester['cargo'] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Nenhum solicitante cadastrado.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const data = JSON.parse(document.getElementById('data').textContent);
+    console.log(data); // Verifique os dados no console
+    Highcharts.chart('container', {
+        chart: {
+            type: 'column'
+        },
+        title: {
+            text: 'Número de Chamados por Solicitante'
+        },
+        xAxis: {
+            categories: data.categories,
+            labels: {
+                rotation: -45
+            }
+        },
+        yAxis: {
+            min: 0,
+            title: {
+                text: 'Número de Chamados'
+            }
+        },
+        series: [{
+            name: 'Chamados',
+            data: data.data
+        }]
+    });
+});
+</script>
 {% endblock %}
