@@ -72,14 +72,44 @@ def date_now():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def ensure_requesters_table_seeded():
+    execute_query(
+        """
+        CREATE TABLE IF NOT EXISTS requesters (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            cargo TEXT NOT NULL,
+            data_criacao TEXT NOT NULL
+        )
+        """
+    )
+
+    row = fetch_one("SELECT COUNT(1) FROM requesters")
+    count = row[0] if row else 0
+
+    if count == 0:
+        now = date_now()
+        for requester in DEFAULT_REQUESTERS:
+            execute_query(
+                """
+                INSERT INTO requesters (nome, email, cargo, data_criacao)
+                VALUES (?, ?, ?, ?)
+                """,
+                (requester["nome"], requester["email"], requester["cargo"], now),
+            )
+
+
 def get_requesters():
-    requesters = app.config.get("REQUESTERS")
-
-    if requesters is None:
-        requesters = [dict(requester) for requester in DEFAULT_REQUESTERS]
-        app.config["REQUESTERS"] = requesters
-
-    return requesters
+    ensure_requesters_table_seeded()
+    rows = fetch_all(
+        """
+        SELECT nome, email, cargo
+        FROM requesters
+        ORDER BY nome COLLATE NOCASE ASC
+        """
+    )
+    return [{"nome": row[0], "email": row[1], "cargo": row[2]} for row in rows]
 
 
 def get_available_people():
@@ -240,7 +270,24 @@ def detalhes(demanda_id):
 
 @app.route('/solicitante', methods=['GET'])
 def solicitante():
-    return render_template('solicitante.html', requesters=get_requesters())
+    requesters = get_requesters()
+    
+    # Count de chamados por solicitante
+    dados = fetch_all("""
+        SELECT solicitante, COUNT(*) as total
+        FROM demandas
+        GROUP BY solicitante
+        ORDER BY total DESC
+    """)
+    
+    # Formata para o gráfico
+    categorias = [row[0] for row in dados]
+    totais = [row[1] for row in dados]
+    
+    return render_template('solicitante.html', 
+                         requesters=requesters,
+                         categorias=categorias,
+                         totais=totais)
 
 
 @app.route('/solicitante/cadastrar', methods=['GET', 'POST'])
@@ -254,13 +301,22 @@ def cadastrar_solicitante():
             flash('Preencha nome, email e cargo para cadastrar!', 'error')
             return render_template('cadastrar_solicitante.html', form_data=request.form)
 
-        get_requesters().append(
-            {
-                "nome": nome,
-                "email": email,
-                "cargo": cargo,
-            }
-        )
+        try:
+            execute_query(
+                """
+                INSERT INTO requesters (nome, email, cargo, data_criacao)
+                VALUES (?, ?, ?, ?)
+                """,
+                (nome, email, cargo, str(date_now())),
+            )
+        except sqlite3.IntegrityError:
+            flash('Ja existe solicitante cadastrado com este email!', 'error')
+            return render_template('cadastrar_solicitante.html', form_data=request.form)
+        except sqlite3.Error as error:
+            log_db_error("cadastrar_solicitante", error, nome=nome, email=email)
+            flash('Erro ao cadastrar solicitante!', 'error')
+            return render_template('cadastrar_solicitante.html', form_data=request.form)
+
         flash('Solicitante cadastrado com sucesso!', 'success')
         return redirect(url_for('solicitante'))
 
