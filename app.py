@@ -31,6 +31,14 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 migrate = Migrate(app, db)
 
+DEFAULT_REQUESTERS = (
+    {"nome": "Joao Silva", "email": "joao.silva@empresa.com", "cargo": "Analista"},
+    {"nome": "Maria Santos", "email": "maria.santos@empresa.com", "cargo": "Coordenadora"},
+    {"nome": "Tech Team", "email": "tech.team@empresa.com", "cargo": "Equipe Tecnica"},
+    {"nome": "Equipe Suporte", "email": "suporte@empresa.com", "cargo": "Suporte"},
+    {"nome": "Time Produto", "email": "produto@empresa.com", "cargo": "Produto"},
+)
+
 
 def get_db():
     return closing(sqlite3.connect(DATABASE_PATH))
@@ -59,8 +67,35 @@ def log_db_error(operation, error, **context):
     context_str = ", ".join(f"{key}={value!r}" for key, value in context.items())
     app.logger.exception("Database error during %s (%s): %s", operation, context_str, error)
 
+
 def date_now():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_requesters():
+    requesters = app.config.get("REQUESTERS")
+
+    if requesters is None:
+        requesters = [dict(requester) for requester in DEFAULT_REQUESTERS]
+        app.config["REQUESTERS"] = requesters
+
+    return requesters
+
+
+def get_available_people():
+    # Placeholder for the future login integration that will hydrate this list.
+    normalized_people = []
+
+    for requester in get_requesters():
+        name = str(requester.get("nome", "")).strip()
+        if name and name not in normalized_people:
+            normalized_people.append(name)
+
+    return normalized_people
+
+
+def is_valid_person(name):
+    return name in get_available_people()
 
 
 @app.route('/', methods=['GET'])
@@ -92,11 +127,21 @@ def index():
 
 @app.route('/nova_demanda', methods=['GET', 'POST'])
 def nova_demanda():
+    people = get_available_people()
+
     if request.method == 'POST':
         titulo = request.form['titulo']
         descricao = request.form['descricao']
-        solicitante = request.form['solicitante']
+        solicitante = request.form['solicitante'].strip()
         prioridade = request.form['prioridade']
+
+        if not is_valid_person(solicitante):
+            flash('Selecione um solicitante valido!', 'error')
+            return render_template(
+                'nova_demanda.html',
+                people=people,
+                form_data=request.form,
+            )
 
         try:
             execute_query(
@@ -111,16 +156,28 @@ def nova_demanda():
         flash('Salvo!')
         return redirect(url_for('index'))
 
-    return render_template('nova_demanda.html')
+    return render_template('nova_demanda.html', people=people, form_data={})
 
 
 @app.route('/editar/<int:demanda_id>', methods=['GET', 'POST'])
 def editar(demanda_id):
+    people = get_available_people()
+
     if request.method == 'POST':
         titulo = request.form['titulo']
         descricao = request.form['descricao']
         prioridade = request.form['prioridade']
-        solicitante = request.form['solicitante']
+        solicitante = request.form['solicitante'].strip()
+
+        if not is_valid_person(solicitante):
+            flash('Selecione um solicitante valido!', 'error')
+            demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
+            return render_template(
+                'editar.html',
+                demanda=demanda,
+                people=people,
+                form_data=request.form,
+            )
 
         try:
             execute_query(
@@ -132,10 +189,11 @@ def editar(demanda_id):
             flash('Erro ao atualizar demanda!')
             return redirect(url_for('editar', demanda_id=demanda_id))
 
+        flash('Atualizado!')
         return redirect(url_for('index'))
 
     demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
-    return render_template('editar.html', demanda=demanda)
+    return render_template('editar.html', demanda=demanda, people=people, form_data={})
 
 
 @app.route('/deletar/<int:demanda_id>', methods=['DELETE'])
@@ -157,8 +215,11 @@ def buscar():
     like_term = f"%{termo}%"
 
     resultados = fetch_all(
-        'SELECT * FROM demandas WHERE titulo LIKE ?',
-        (like_term,),
+        '''SELECT * FROM demandas 
+           WHERE titulo LIKE ? 
+           OR id LIKE ?
+           OR solicitante LIKE ?''',
+        (like_term, like_term, like_term),
     )
     return render_template('index.html', demandas=resultados)
 
@@ -168,13 +229,72 @@ def detalhes(demanda_id):
     demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
     comentarios = fetch_all('SELECT * FROM comentarios WHERE demanda_id = ?', (demanda_id,))
 
-    return render_template('detalhes.html', demanda=demanda, comentarios=comentarios)
+    return render_template(
+        'detalhes.html',
+        demanda=demanda,
+        comentarios=comentarios,
+        people=get_available_people(),
+        form_data={},
+    )
+
+
+@app.route('/solicitante', methods=['GET'])
+def solicitante():
+    return render_template('solicitante.html', requesters=get_requesters())
+
+
+@app.route('/solicitante/cadastrar', methods=['GET', 'POST'])
+def cadastrar_solicitante():
+    if request.method == 'POST':
+        nome = request.form['nome'].strip()
+        email = request.form['email'].strip()
+        cargo = request.form['cargo'].strip()
+
+        if not nome or not email or not cargo:
+            flash('Preencha nome, email e cargo para cadastrar!', 'error')
+            return render_template('cadastrar_solicitante.html', form_data=request.form)
+
+        get_requesters().append(
+            {
+                "nome": nome,
+                "email": email,
+                "cargo": cargo,
+            }
+        )
+        flash('Solicitante cadastrado com sucesso!', 'success')
+        return redirect(url_for('solicitante'))
+
+    return render_template('cadastrar_solicitante.html', form_data={})
 
 
 @app.route('/adicionar_comentario/<int:demanda_id>', methods=['POST'])
 def adicionar_comentario(demanda_id):
-    comentario = request.form['comentario']
-    autor = request.form['autor']
+    comentario = request.form['comentario'].strip()
+    autor = request.form['autor'].strip()
+
+    if not is_valid_person(autor):
+        flash('Selecione um autor valido para o comentario!', 'error')
+        demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
+        comentarios = fetch_all('SELECT * FROM comentarios WHERE demanda_id = ?', (demanda_id,))
+        return render_template(
+            'detalhes.html',
+            demanda=demanda,
+            comentarios=comentarios,
+            people=get_available_people(),
+            form_data=request.form,
+        )
+
+    if not comentario:
+        flash('Escreva um comentario antes de enviar!', 'error')
+        demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
+        comentarios = fetch_all('SELECT * FROM comentarios WHERE demanda_id = ?', (demanda_id,))
+        return render_template(
+            'detalhes.html',
+            demanda=demanda,
+            comentarios=comentarios,
+            people=get_available_people(),
+            form_data=request.form,
+        )
 
     try:
         execute_query(

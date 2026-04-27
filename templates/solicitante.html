@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Solicitante</h2>
+
+<div class="glass-panel-soft" style="padding: 16px;">
+    <div class="page-actions" style="margin-bottom: 16px;">
+        <a href="{{ url_for('cadastrar_solicitante') }}" class="button-link">Cadastrar</a>
+        <a href="{{ url_for('index') }}" class="button-link button-link-muted">Voltar</a>
+    </div>
+
+    {% if requesters %}
+    <table class="table-demandas">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Cargo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for requester in requesters %}
+            <tr>
+                <td>{{ requester['nome'] }}</td>
+                <td>{{ requester['email'] }}</td>
+                <td>{{ requester['cargo'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Nenhum solicitante cadastrado.</p>
+    {% endif %}
+</div>
+{% endblock %}
