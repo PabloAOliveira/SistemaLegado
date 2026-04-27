@@ -184,3 +184,37 @@ Este bloco resume as mudancas introduzidas pela Maria no projeto.
 - Criados helpers para expor nomes disponiveis e manter a lista de solicitantes carregada na aplicacao.
 - Testes E2E e fixtures foram atualizados para cobrir dropdowns, validacao de comentario e cadastro de solicitante.
 
+## 2026-04-27 - Enzo Almeida (RA: 1134927)
+
+Este bloco resume as mudancas realizadas na area de Solicitantes e ajustes de UI/CSS.
+
+### Frontend (`templates/`)
+
+- Pagina `Solicitantes` (`templates/solicitante.html`) padronizada para seguir o layout da tela inicial:
+  - Toolbar no topo com `Cadastrar` e `Voltar` alinhados a direita.
+  - Tabela com o primeiro campo sendo `ID`.
+  - Truncamento visual com reticencias (ellipsis) para campos longos.
+  - Coluna `Acoes` com opcoes de `Ver`, `Editar` e `Deletar` (icones no padrao da tabela principal).
+  - Scroll ajustado para ser do conteudo inteiro da pagina (grafico + tabela), e nao apenas na tabela.
+- Tela de cadastro de solicitante (`templates/cadastrar_solicitante.html`) alinhada ao padrao visual:
+  - Toolbar no topo com botao `Voltar`.
+  - Campos `nome`, `email` e `cargo` com limite de `maxlength=40`.
+- Criadas telas para operacoes de solicitantes:
+  - `templates/detalhes_solicitante.html` (visualizacao).
+  - `templates/editar_solicitante.html` (edicao).
+
+### Backend (`app.py`)
+
+- `get_requesters()` passou a retornar tambem o `id` do solicitante.
+- Adicionado helper `get_requester_by_id(requester_id)`.
+- Criadas rotas CRUD para solicitantes:
+  - `GET /solicitante/<int:requester_id>` (detalhes).
+  - `GET|POST /solicitante/editar/<int:requester_id>` (editar).
+  - `DELETE /solicitante/deletar/<int:requester_id>` (deletar via fetch).
+- Validacao de tamanho no backend para `nome`, `email` e `cargo` (maximo 40 caracteres) em cadastro e edicao.
+
+### CSS / Navegacao (`static/style.css`, `templates/base.html`)
+
+- CSS ajustado para aplicar o mesmo estilo global em `input[type="email"]` (antes ficava com estilo padrao do browser).
+- Link/botao `Solicitante` no header padronizado com estilo de botao e ocultado quando o usuario esta em rotas `/solicitante...`.
+

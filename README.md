@@ -12,7 +12,7 @@ python app.py
 ```
 Para ativar o ambiente virtual:
 - python -m venv venv
-- source venv/bin/activate  # ou venv\Scripts\activate no Windows
+- source venv/bin/activate  # ou venv\Scripts\activate no Windows # ou source venv/Scripts/activate
 - pip install -r requirements.txt
 - ...
 
