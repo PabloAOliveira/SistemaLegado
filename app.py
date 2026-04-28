@@ -305,6 +305,11 @@ def solicitante():
                          totais=totais)
 
 
+@app.route('/sutita', methods=['GET'])
+def sutita():
+    return render_template('sutita.html')
+
+
 @app.route('/solicitante/<int:requester_id>', methods=['GET'])
 def detalhes_solicitante(requester_id):
     requester = get_requester_by_id(requester_id)
