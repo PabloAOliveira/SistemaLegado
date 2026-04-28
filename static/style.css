@@ -360,6 +360,7 @@ button:hover,
 }
 
 input[type="text"],
+input[type="email"],
 textarea,
 select {
     display: block;
@@ -374,6 +375,7 @@ select {
 }
 
 body[data-theme="dark"] input[type="text"],
+body[data-theme="dark"] input[type="email"],
 body[data-theme="dark"] textarea,
 body[data-theme="dark"] select {
     background: rgba(15, 23, 42, 0.55);
@@ -606,6 +608,52 @@ body[data-theme="dark"] .table-demandas tbody tr:nth-child(even) td {
 .table-demandas tbody td:nth-child(6) {
     white-space: nowrap;
     text-align: center;
+}
+
+.cell-ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.solicitante-chart {
+    padding: 16px;
+    flex-shrink: 0;
+}
+
+.solicitante-chart-canvas {
+    height: 350px;
+    width: 100%;
+}
+
+.solicitante-main-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+    scrollbar-color: var(--table-scroll-thumb) var(--table-scroll-track);
+    scrollbar-width: thin;
+}
+
+.solicitante-table {
+    padding: 16px;
+}
+
+.solicitante-main-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+
+.solicitante-main-scroll::-webkit-scrollbar-track {
+    background: var(--table-scroll-track);
+    border-radius: 999px;
+}
+
+.solicitante-main-scroll::-webkit-scrollbar-thumb {
+    background: var(--table-scroll-thumb);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
 }
 
 .row-actions {

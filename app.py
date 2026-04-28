@@ -104,12 +104,27 @@ def get_requesters():
     ensure_requesters_table_seeded()
     rows = fetch_all(
         """
-        SELECT nome, email, cargo
+        SELECT id, nome, email, cargo
         FROM requesters
         ORDER BY nome COLLATE NOCASE ASC
         """
     )
-    return [{"nome": row[0], "email": row[1], "cargo": row[2]} for row in rows]
+    return [{"id": row[0], "nome": row[1], "email": row[2], "cargo": row[3]} for row in rows]
+
+
+def get_requester_by_id(requester_id):
+    ensure_requesters_table_seeded()
+    row = fetch_one(
+        """
+        SELECT id, nome, email, cargo, data_criacao
+        FROM requesters
+        WHERE id = ?
+        """,
+        (requester_id,),
+    )
+    if not row:
+        return None
+    return {"id": row[0], "nome": row[1], "email": row[2], "cargo": row[3], "data_criacao": row[4]}
 
 
 def get_available_people():
@@ -290,6 +305,73 @@ def solicitante():
                          totais=totais)
 
 
+@app.route('/solicitante/<int:requester_id>', methods=['GET'])
+def detalhes_solicitante(requester_id):
+    requester = get_requester_by_id(requester_id)
+    if not requester:
+        flash('Solicitante não encontrado!', 'error')
+        return redirect(url_for('solicitante'))
+    return render_template('detalhes_solicitante.html', requester=requester)
+
+
+@app.route('/solicitante/editar/<int:requester_id>', methods=['GET', 'POST'])
+def editar_solicitante(requester_id):
+    requester = get_requester_by_id(requester_id)
+    if not requester:
+        flash('Solicitante não encontrado!', 'error')
+        return redirect(url_for('solicitante'))
+
+    if request.method == 'POST':
+        nome = request.form.get('nome', '').strip()
+        email = request.form.get('email', '').strip()
+        cargo = request.form.get('cargo', '').strip()
+
+        if not nome or not email or not cargo:
+            flash('Preencha nome, email e cargo para salvar!', 'error')
+            return render_template('editar_solicitante.html', requester=requester, form_data=request.form)
+
+        if len(nome) > 40 or len(email) > 40 or len(cargo) > 40:
+            flash('Nome, email e cargo devem ter no máximo 40 caracteres.', 'error')
+            return render_template('editar_solicitante.html', requester=requester, form_data=request.form)
+
+        try:
+            execute_query(
+                """
+                UPDATE requesters
+                SET nome = ?, email = ?, cargo = ?
+                WHERE id = ?
+                """,
+                (nome, email, cargo, requester_id),
+            )
+        except sqlite3.IntegrityError:
+            flash('Já existe solicitante cadastrado com este email!', 'error')
+            return render_template('editar_solicitante.html', requester=requester, form_data=request.form)
+        except sqlite3.Error as error:
+            log_db_error("editar_solicitante", error, requester_id=requester_id, email=email)
+            flash('Erro ao editar solicitante!', 'error')
+            return render_template('editar_solicitante.html', requester=requester, form_data=request.form)
+
+        flash('Solicitante atualizado com sucesso!', 'success')
+        return redirect(url_for('solicitante'))
+
+    return render_template('editar_solicitante.html', requester=requester, form_data={})
+
+
+@app.route('/solicitante/deletar/<int:requester_id>', methods=['DELETE'])
+def deletar_solicitante(requester_id):
+    requester = get_requester_by_id(requester_id)
+    if not requester:
+        return ('', 404)
+
+    try:
+        execute_query("DELETE FROM requesters WHERE id = ?", (requester_id,))
+    except sqlite3.Error as error:
+        log_db_error("deletar_solicitante", error, requester_id=requester_id)
+        return ('', 500)
+
+    return ('', 204)
+
+
 @app.route('/solicitante/cadastrar', methods=['GET', 'POST'])
 def cadastrar_solicitante():
     if request.method == 'POST':
@@ -299,6 +381,10 @@ def cadastrar_solicitante():
 
         if not nome or not email or not cargo:
             flash('Preencha nome, email e cargo para cadastrar!', 'error')
+            return render_template('cadastrar_solicitante.html', form_data=request.form)
+
+        if len(nome) > 40 or len(email) > 40 or len(cargo) > 40:
+            flash('Nome, email e cargo devem ter no máximo 40 caracteres.', 'error')
             return render_template('cadastrar_solicitante.html', form_data=request.form)
 
         try:

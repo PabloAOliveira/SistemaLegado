@@ -11,7 +11,9 @@
         <div class="header-inner">
             <h1><a href="{{ url_for('index') }}" aria-label="Ir para página inicial">SGDI</a></h1>
             <div class="menu">
-                <a href="{{ url_for('solicitante') }}">Solicitante</a>
+                {% if not request.path.startswith('/solicitante') %}
+                    <a href="{{ url_for('solicitante') }}" class="button-link button-link-muted">Solicitante</a>
+                {% endif %}
                 <form action="/buscar" method="GET" class="search-form">
                     <input type="text" name="q" placeholder="Buscar">
                     <button type="submit">Buscar</button>

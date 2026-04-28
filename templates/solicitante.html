@@ -1,23 +1,20 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Cabeçalho com Título e Botões -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-    <h2 style="margin: 0;">Solicitante</h2>
-    <div class="page-actions">
-        <a href="{{ url_for('cadastrar_solicitante') }}" class="button-link">Cadastrar</a>
-        <a href="{{ url_for('index') }}" class="button-link button-link-muted">Voltar</a>
+<div class="page-toolbar glass-panel-soft">
+    <div class="toolbar-inner">
+        <h2 style="margin: 0;">Solicitantes</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('cadastrar_solicitante') }}" class="button-link">Cadastrar</a>
+            <a href="{{ url_for('index') }}" class="button-link button-link-muted">Voltar</a>
+        </div>
     </div>
 </div>
 
-<!-- Container com scroll que engloba gráfico e tabela -->
-<div style="overflow-y: auto; height: calc(100vh - 150px); padding: 0;">
-    <!-- Container do Gráfico -->
-    <div class="glass-panel-soft" style="padding: 16px; margin-bottom: 20px;">
-        <!-- Gráfico de Chamados por Solicitante -->
-        <div id="container" style="margin-bottom: 0; height: 350px;"></div>
-        
-        <!-- Dados para o gráfico -->
+<div class="solicitante-main-scroll">
+    <div class="glass-panel-soft solicitante-chart">
+        <div id="container" class="solicitante-chart-canvas"></div>
+
         <script id="data" type="application/json">
         {
             "categories": {{ categorias | tojson }},
@@ -26,29 +23,45 @@
         </script>
     </div>
 
-    <!-- Container da Tabela -->
-    <div class="glass-panel-soft" style="padding: 16px; margin-top: 0;">
+    <div class="glass-panel-soft solicitante-table">
         {% if requesters %}
         <table class="table-demandas">
+            <colgroup>
+                <col style="width: 8%;">
+                <col style="width: 24%;">
+                <col style="width: 30%;">
+                <col style="width: 24%;">
+                <col style="width: 14%;">
+            </colgroup>
             <thead>
                 <tr>
+                    <th>ID</th>
                     <th>Nome</th>
                     <th>Email</th>
                     <th>Cargo</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
                 {% for requester in requesters %}
                 <tr>
-                    <td>{{ requester['nome'] }}</td>
-                    <td>{{ requester['email'] }}</td>
-                    <td>{{ requester['cargo'] }}</td>
+                    <td>{{ requester['id'] }}</td>
+                    <td class="cell-ellipsis" title="{{ requester['nome'] }}">{{ requester['nome'] }}</td>
+                    <td class="cell-ellipsis" title="{{ requester['email'] }}">{{ requester['email'] }}</td>
+                    <td class="cell-ellipsis" title="{{ requester['cargo'] }}">{{ requester['cargo'] }}</td>
+                    <td>
+                        <div class="row-actions">
+                            <a href="{{ url_for('detalhes_solicitante', requester_id=requester['id']) }}" class="action-view" data-label="Ver" aria-label="Ver solicitante {{ requester['id'] }}"></a>
+                            <a href="{{ url_for('editar_solicitante', requester_id=requester['id']) }}" class="action-edit" data-label="Editar" aria-label="Editar solicitante {{ requester['id'] }}"></a>
+                            <a href="#" class="action-delete" data-label="Deletar" aria-label="Deletar solicitante {{ requester['id'] }}" onclick="deletarSolicitante({{ requester['id'] }}); return false;"></a>
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         {% else %}
-        <p>Nenhum solicitante cadastrado.</p>
+        <p style="margin: 0;">Nenhum solicitante cadastrado.</p>
         {% endif %}
     </div>
 </div>
@@ -57,7 +70,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const data = JSON.parse(document.getElementById('data').textContent);
-    console.log(data); // Verifique os dados no console
     Highcharts.chart('container', {
         chart: {
             type: 'column'
@@ -83,5 +95,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }]
     });
 });
+
+function deletarSolicitante(id) {
+    fetch('/solicitante/deletar/' + id, { method: 'DELETE' })
+        .then(function(response) {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            window.location.href = '/solicitante';
+        })
+        .catch(function() {
+            alert('Erro ao deletar solicitante.');
+        });
+}
 </script>
 {% endblock %}
