@@ -1,22 +1,29 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Cadastrar Solicitante</h2>
+<div class="page-toolbar glass-panel-soft">
+    <div class="toolbar-inner">
+        <h2 style="margin: 0;">Cadastrar Solicitante</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('solicitante') }}" class="button-link button-link-muted">Voltar</a>
+        </div>
+    </div>
+</div>
 
 <form id="form-cadastrar-solicitante" method="POST" action="{{ url_for('cadastrar_solicitante') }}" class="form-card glass-panel-soft">
     <div class="form-field">
         <label for="nome">Nome:</label>
-        <input id="nome" type="text" name="nome" value="{{ form_data.get('nome', '') }}" required>
+        <input id="nome" type="text" name="nome" value="{{ form_data.get('nome', '') }}" maxlength="50" required>
     </div>
 
     <div class="form-field">
         <label for="email">Email:</label>
-        <input id="email" type="email" name="email" value="{{ form_data.get('email', '') }}" required>
+        <input id="email" type="email" name="email" value="{{ form_data.get('email', '') }}" maxlength="50" required>
     </div>
 
     <div class="form-field">
         <label for="cargo">Cargo:</label>
-        <input id="cargo" type="text" name="cargo" value="{{ form_data.get('cargo', '') }}" required>
+        <input id="cargo" type="text" name="cargo" value="{{ form_data.get('cargo', '') }}" maxlength="20" required>
     </div>
 
     <div class="form-actions">

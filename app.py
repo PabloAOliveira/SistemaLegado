@@ -72,14 +72,59 @@ def date_now():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def ensure_requesters_table_seeded():
+    execute_query(
+        """
+        CREATE TABLE IF NOT EXISTS requesters (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            cargo TEXT NOT NULL,
+            data_criacao TEXT NOT NULL
+        )
+        """
+    )
+
+    row = fetch_one("SELECT COUNT(1) FROM requesters")
+    count = row[0] if row else 0
+
+    if count == 0:
+        now = date_now()
+        for requester in DEFAULT_REQUESTERS:
+            execute_query(
+                """
+                INSERT INTO requesters (nome, email, cargo, data_criacao)
+                VALUES (?, ?, ?, ?)
+                """,
+                (requester["nome"], requester["email"], requester["cargo"], now),
+            )
+
+
 def get_requesters():
-    requesters = app.config.get("REQUESTERS")
+    ensure_requesters_table_seeded()
+    rows = fetch_all(
+        """
+        SELECT id, nome, email, cargo
+        FROM requesters
+        ORDER BY nome COLLATE NOCASE ASC
+        """
+    )
+    return [{"id": row[0], "nome": row[1], "email": row[2], "cargo": row[3]} for row in rows]
 
-    if requesters is None:
-        requesters = [dict(requester) for requester in DEFAULT_REQUESTERS]
-        app.config["REQUESTERS"] = requesters
 
-    return requesters
+def get_requester_by_id(requester_id):
+    ensure_requesters_table_seeded()
+    row = fetch_one(
+        """
+        SELECT id, nome, email, cargo, data_criacao
+        FROM requesters
+        WHERE id = ?
+        """,
+        (requester_id,),
+    )
+    if not row:
+        return None
+    return {"id": row[0], "nome": row[1], "email": row[2], "cargo": row[3], "data_criacao": row[4]}
 
 
 def get_available_people():
@@ -189,6 +234,7 @@ def editar(demanda_id):
             flash('Erro ao atualizar demanda!')
             return redirect(url_for('editar', demanda_id=demanda_id))
 
+        flash('Atualizado!')
         return redirect(url_for('index'))
 
     demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
@@ -214,8 +260,11 @@ def buscar():
     like_term = f"%{termo}%"
 
     resultados = fetch_all(
-        'SELECT * FROM demandas WHERE titulo LIKE ?',
-        (like_term,),
+        '''SELECT * FROM demandas 
+           WHERE titulo LIKE ? 
+           OR id LIKE ?
+           OR solicitante LIKE ?''',
+        (like_term, like_term, like_term),
     )
     return render_template('index.html', demandas=resultados)
 
@@ -236,7 +285,91 @@ def detalhes(demanda_id):
 
 @app.route('/solicitante', methods=['GET'])
 def solicitante():
-    return render_template('solicitante.html', requesters=get_requesters())
+    requesters = get_requesters()
+    
+    # Count de chamados por solicitante
+    dados = fetch_all("""
+        SELECT solicitante, COUNT(*) as total
+        FROM demandas
+        GROUP BY solicitante
+        ORDER BY total DESC
+    """)
+    
+    # Formata para o gráfico
+    categorias = [row[0] for row in dados]
+    totais = [row[1] for row in dados]
+    
+    return render_template('solicitante.html', 
+                         requesters=requesters,
+                         categorias=categorias,
+                         totais=totais)
+
+
+@app.route('/solicitante/<int:requester_id>', methods=['GET'])
+def detalhes_solicitante(requester_id):
+    requester = get_requester_by_id(requester_id)
+    if not requester:
+        flash('Solicitante não encontrado!', 'error')
+        return redirect(url_for('solicitante'))
+    return render_template('detalhes_solicitante.html', requester=requester)
+
+
+@app.route('/solicitante/editar/<int:requester_id>', methods=['GET', 'POST'])
+def editar_solicitante(requester_id):
+    requester = get_requester_by_id(requester_id)
+    if not requester:
+        flash('Solicitante não encontrado!', 'error')
+        return redirect(url_for('solicitante'))
+
+    if request.method == 'POST':
+        nome = request.form.get('nome', '').strip()
+        email = request.form.get('email', '').strip()
+        cargo = request.form.get('cargo', '').strip()
+
+        if not nome or not email or not cargo:
+            flash('Preencha nome, email e cargo para salvar!', 'error')
+            return render_template('editar_solicitante.html', requester=requester, form_data=request.form)
+
+        if len(nome) > 40 or len(email) > 40 or len(cargo) > 40:
+            flash('Nome, email e cargo devem ter no máximo 40 caracteres.', 'error')
+            return render_template('editar_solicitante.html', requester=requester, form_data=request.form)
+
+        try:
+            execute_query(
+                """
+                UPDATE requesters
+                SET nome = ?, email = ?, cargo = ?
+                WHERE id = ?
+                """,
+                (nome, email, cargo, requester_id),
+            )
+        except sqlite3.IntegrityError:
+            flash('Já existe solicitante cadastrado com este email!', 'error')
+            return render_template('editar_solicitante.html', requester=requester, form_data=request.form)
+        except sqlite3.Error as error:
+            log_db_error("editar_solicitante", error, requester_id=requester_id, email=email)
+            flash('Erro ao editar solicitante!', 'error')
+            return render_template('editar_solicitante.html', requester=requester, form_data=request.form)
+
+        flash('Solicitante atualizado com sucesso!', 'success')
+        return redirect(url_for('solicitante'))
+
+    return render_template('editar_solicitante.html', requester=requester, form_data={})
+
+
+@app.route('/solicitante/deletar/<int:requester_id>', methods=['DELETE'])
+def deletar_solicitante(requester_id):
+    requester = get_requester_by_id(requester_id)
+    if not requester:
+        return ('', 404)
+
+    try:
+        execute_query("DELETE FROM requesters WHERE id = ?", (requester_id,))
+    except sqlite3.Error as error:
+        log_db_error("deletar_solicitante", error, requester_id=requester_id)
+        return ('', 500)
+
+    return ('', 204)
 
 
 @app.route('/solicitante/cadastrar', methods=['GET', 'POST'])
@@ -250,13 +383,26 @@ def cadastrar_solicitante():
             flash('Preencha nome, email e cargo para cadastrar!', 'error')
             return render_template('cadastrar_solicitante.html', form_data=request.form)
 
-        get_requesters().append(
-            {
-                "nome": nome,
-                "email": email,
-                "cargo": cargo,
-            }
-        )
+        if len(nome) > 40 or len(email) > 40 or len(cargo) > 40:
+            flash('Nome, email e cargo devem ter no máximo 40 caracteres.', 'error')
+            return render_template('cadastrar_solicitante.html', form_data=request.form)
+
+        try:
+            execute_query(
+                """
+                INSERT INTO requesters (nome, email, cargo, data_criacao)
+                VALUES (?, ?, ?, ?)
+                """,
+                (nome, email, cargo, str(date_now())),
+            )
+        except sqlite3.IntegrityError:
+            flash('Ja existe solicitante cadastrado com este email!', 'error')
+            return render_template('cadastrar_solicitante.html', form_data=request.form)
+        except sqlite3.Error as error:
+            log_db_error("cadastrar_solicitante", error, nome=nome, email=email)
+            flash('Erro ao cadastrar solicitante!', 'error')
+            return render_template('cadastrar_solicitante.html', form_data=request.form)
+
         flash('Solicitante cadastrado com sucesso!', 'success')
         return redirect(url_for('solicitante'))
 

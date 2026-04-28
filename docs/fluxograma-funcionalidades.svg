@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1160" viewBox="0 0 1500 1160">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #1f2937; }
+      .subtitle { font: 400 14px Arial, sans-serif; fill: #475569; }
+      .lane-title { font: 700 14px Arial, sans-serif; fill: #0f172a; }
+      .node-title { font: 700 15px Arial, sans-serif; fill: #111827; }
+      .node-text { font: 400 13px Arial, sans-serif; fill: #1f2937; }
+      .small { font: 400 12px Arial, sans-serif; fill: #334155; }
+      .node { stroke: #334155; stroke-width: 2; rx: 12; ry: 12; }
+      .decision { fill: #fef3c7; stroke: #334155; stroke-width: 2; }
+      .arrow { stroke: #2563eb; stroke-width: 2.5; fill: none; marker-end: url(#arrowhead); }
+      .label { font: 700 12px Arial, sans-serif; fill: #1d4ed8; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb" />
+    </marker>
+  </defs>
+
+  <rect width="1500" height="1160" fill="#f8fafc" />
+  <text x="40" y="45" class="title">Fluxograma de funcionalidades do SGDI</text>
+  <text x="40" y="70" class="subtitle">Usuário interage com páginas, o Flask processa as rotas em app.py e persiste no banco SQLite demandas.db.</text>
+
+  <!-- Swimlanes -->
+  <rect x="30" y="95" width="1440" height="1020" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+  <line x1="420" y1="95" x2="420" y2="1115" stroke="#cbd5e1" stroke-width="1.5" />
+  <line x1="960" y1="95" x2="960" y2="1115" stroke="#cbd5e1" stroke-width="1.5" />
+
+  <text x="60" y="125" class="lane-title">USUARIO / FRONTEND</text>
+  <text x="470" y="125" class="lane-title">FLASK (ROTAS EM app.py)</text>
+  <text x="1010" y="125" class="lane-title">BANCO SQLITE (demandas.db)</text>
+
+  <!-- Start and index flow -->
+  <rect x="70" y="160" width="280" height="70" class="node" fill="#dbeafe" />
+  <text x="90" y="190" class="node-title">1) Acessar site</text>
+  <text x="90" y="212" class="node-text">GET /</text>
+
+  <rect x="500" y="160" width="360" height="85" class="node" fill="#bfdbfe" />
+  <text x="520" y="192" class="node-title">Rota index()</text>
+  <text x="520" y="214" class="node-text">Consulta demandas e renderiza templates/index.html</text>
+
+  <rect x="1030" y="160" width="350" height="85" class="node" fill="#dcfce7" />
+  <text x="1050" y="192" class="node-title">SELECT em demandas</text>
+  <text x="1050" y="214" class="node-text">Leitura de lista e filtros de prioridade</text>
+
+  <path d="M350 195 L500 195" class="arrow" />
+  <path d="M860 202 L1030 202" class="arrow" />
+
+  <!-- Menu choices -->
+  <polygon points="210,290 310,350 210,410 110,350" class="decision" />
+  <text x="210" y="344" text-anchor="middle" class="node-title">Escolha</text>
+  <text x="210" y="364" text-anchor="middle" class="node-text">funcionalidade</text>
+
+  <path d="M210 230 L210 290" class="arrow" />
+
+  <!-- Setas verticais no fundo -->
+  <path d="M260 410 L260 470" class="arrow" />
+  <path d="M260 410 L260 590" class="arrow" />
+  <path d="M260 410 L260 700" class="arrow" />
+  <path d="M260 410 L260 810" class="arrow" />
+  <path d="M260 410 L260 920" class="arrow" />
+
+  <!-- Nova demanda -->
+  <rect x="40" y="470" width="340" height="86" class="node" fill="#dbeafe" />
+  <text x="60" y="500" class="node-title">2) Clicar em "Nova Demanda"</text>
+  <text x="60" y="522" class="node-text">Preencher titulo, descricao, solicitante, prioridade</text>
+  <text x="60" y="544" class="node-text">POST /nova_demanda</text>
+
+  <rect x="500" y="470" width="360" height="86" class="node" fill="#bfdbfe" />
+  <text x="520" y="500" class="node-title">Rota nova_demanda()</text>
+  <text x="520" y="522" class="node-text">Valida dados e executa INSERT</text>
+  <text x="520" y="544" class="node-text">Redireciona para /</text>
+
+  <rect x="1030" y="470" width="350" height="86" class="node" fill="#dcfce7" />
+  <text x="1050" y="500" class="node-title">INSERT em demandas</text>
+  <text x="1050" y="522" class="node-text">Nova linha criada com data_criacao</text>
+
+  <path d="M380 513 L500 513" class="arrow" />
+  <path d="M860 513 L1030 513" class="arrow" />
+  <text x="310" y="448" class="label">Nova Demanda</text>
+
+  <!-- Editar -->
+  <rect x="40" y="590" width="340" height="78" class="node" fill="#dbeafe" />
+  <text x="60" y="620" class="node-title">3) Clicar em "Editar"</text>
+  <text x="60" y="642" class="node-text">POST /editar/&lt;id&gt;</text>
+
+  <rect x="500" y="590" width="360" height="78" class="node" fill="#bfdbfe" />
+  <text x="520" y="620" class="node-title">Rota editar(demanda_id)</text>
+  <text x="520" y="642" class="node-text">UPDATE da demanda e redirect para /</text>
+
+  <rect x="1030" y="590" width="350" height="78" class="node" fill="#dcfce7" />
+  <text x="1050" y="620" class="node-title">UPDATE em demandas</text>
+  <text x="1050" y="642" class="node-text">Registro existente alterado</text>
+
+  <path d="M380 629 L500 629" class="arrow" />
+  <path d="M860 629 L1030 629" class="arrow" />
+  <text x="325" y="583" class="label">Editar</text>
+
+  <!-- Deletar -->
+  <rect x="40" y="700" width="340" height="78" class="node" fill="#dbeafe" />
+  <text x="60" y="730" class="node-title">4) Clicar em "Deletar"</text>
+  <text x="60" y="752" class="node-text">DELETE /deletar/&lt;id&gt;</text>
+
+  <rect x="500" y="700" width="360" height="78" class="node" fill="#bfdbfe" />
+  <text x="520" y="730" class="node-title">Rota deletar(demanda_id)</text>
+  <text x="520" y="752" class="node-text">Executa DELETE e redireciona para /</text>
+
+  <rect x="1030" y="700" width="350" height="78" class="node" fill="#dcfce7" />
+  <text x="1050" y="730" class="node-title">DELETE em demandas</text>
+  <text x="1050" y="752" class="node-text">Registro removido</text>
+
+  <path d="M380 739 L500 739" class="arrow" />
+  <path d="M860 739 L1030 739" class="arrow" />
+  <text x="320" y="695" class="label">Deletar</text>
+
+  <!-- Buscar -->
+  <rect x="40" y="810" width="340" height="78" class="node" fill="#dbeafe" />
+  <text x="60" y="840" class="node-title">5) Buscar demanda</text>
+  <text x="60" y="862" class="node-text">GET /buscar?q=termo</text>
+
+  <rect x="500" y="810" width="360" height="78" class="node" fill="#bfdbfe" />
+  <text x="520" y="840" class="node-title">Rota buscar()</text>
+  <text x="520" y="862" class="node-text">Filtra por titulo, id ou solicitante</text>
+
+  <rect x="1030" y="810" width="350" height="78" class="node" fill="#dcfce7" />
+  <text x="1050" y="840" class="node-title">SELECT com LIKE</text>
+  <text x="1050" y="862" class="node-text">Retorna resultados para index</text>
+
+  <path d="M380 849 L500 849" class="arrow" />
+  <path d="M860 849 L1030 849" class="arrow" />
+  <text x="330" y="805" class="label">Buscar</text>
+
+  <!-- Detalhes + comentario -->
+  <rect x="40" y="920" width="340" height="160" class="node" fill="#dbeafe" />
+  <text x="60" y="950" class="node-title">6) Ver detalhes e comentar</text>
+  <text x="60" y="972" class="node-text">GET /detalhes/&lt;id&gt;</text>
+  <text x="60" y="994" class="node-text">POST /adicionar_comentario/&lt;id&gt;</text>
+  <text x="60" y="1016" class="node-text">(autor + comentario)</text>
+  <text x="60" y="1038" class="node-text">Opcional: /solicitante e /solicitante/cadastrar</text>
+
+  <rect x="500" y="920" width="360" height="160" class="node" fill="#bfdbfe" />
+  <text x="520" y="950" class="node-title">Rotas detalhes() e adicionar_comentario()</text>
+  <text x="520" y="972" class="node-text">Carrega demanda + comentarios</text>
+  <text x="520" y="994" class="node-text">Valida autor/comentario e faz INSERT</text>
+  <text x="520" y="1016" class="node-text">Renderiza templates/detalhes.html</text>
+
+  <rect x="1030" y="920" width="350" height="160" class="node" fill="#dcfce7" />
+  <text x="1050" y="950" class="node-title">SELECT e INSERT em comentarios</text>
+  <text x="1050" y="972" class="node-text">Relacionados a demanda_id</text>
+  <text x="1050" y="994" class="node-text">Leitura de demanda para detalhes</text>
+  <text x="1050" y="1016" class="node-text">Solicitantes ficam em memoria (config)</text>
+
+  <path d="M380 992 L500 992" class="arrow" />
+  <path d="M860 992 L1030 992" class="arrow" />
+  <text x="300" y="915" class="label">Detalhes + Comentario</text>
+
+  <text x="40" y="1138" class="small">Exemplo direto: "Nova Demanda" -> POST /nova_demanda em app.py -> INSERT em demandas.db.</text>
+</svg>
+
