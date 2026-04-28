@@ -213,13 +213,15 @@ h4 {
 
 .toast-stack {
     position: fixed;
-    top: calc(var(--header-height) + var(--content-gap));
-    right: 18px;
+    top: 12%;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 210;
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: 10px;
-    width: min(360px, calc(100vw - 24px));
+    width: min(500px, calc(100vw - 24px));
     pointer-events: none;
 }
 
@@ -257,6 +259,7 @@ h4 {
     flex: 1;
     line-height: 1.35;
     font-weight: 600;
+    text-align: center;
 }
 
 .toast-close {
@@ -299,9 +302,7 @@ body[data-theme="dark"] .toast {
 
 @media (max-width: 720px) {
     .toast-stack {
-        right: 12px;
-        left: 12px;
-        width: auto;
+        width: calc(100vw - 24px);
     }
 }
 
@@ -359,6 +360,7 @@ button:hover,
 }
 
 input[type="text"],
+input[type="email"],
 textarea,
 select {
     display: block;
@@ -373,6 +375,7 @@ select {
 }
 
 body[data-theme="dark"] input[type="text"],
+body[data-theme="dark"] input[type="email"],
 body[data-theme="dark"] textarea,
 body[data-theme="dark"] select {
     background: rgba(15, 23, 42, 0.55);
@@ -605,6 +608,52 @@ body[data-theme="dark"] .table-demandas tbody tr:nth-child(even) td {
 .table-demandas tbody td:nth-child(6) {
     white-space: nowrap;
     text-align: center;
+}
+
+.cell-ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.solicitante-chart {
+    padding: 16px;
+    flex-shrink: 0;
+}
+
+.solicitante-chart-canvas {
+    height: 350px;
+    width: 100%;
+}
+
+.solicitante-main-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+    scrollbar-color: var(--table-scroll-thumb) var(--table-scroll-track);
+    scrollbar-width: thin;
+}
+
+.solicitante-table {
+    padding: 16px;
+}
+
+.solicitante-main-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+
+.solicitante-main-scroll::-webkit-scrollbar-track {
+    background: var(--table-scroll-track);
+    border-radius: 999px;
+}
+
+.solicitante-main-scroll::-webkit-scrollbar-thumb {
+    background: var(--table-scroll-thumb);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
 }
 
 .row-actions {
@@ -893,5 +942,198 @@ body[data-theme="dark"] .table-demandas tbody tr.priority-row-sem-valor .priorit
 
     .priority-text {
         font-size: 0.74rem;
+    }
+}
+
+/* Página Sutita */
+.sutita-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+}
+
+.sutita-content {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+}
+
+.sutita-logo-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.sutita-logo {
+    max-width: 350px;
+    max-height: 350px;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+body[data-theme="dark"] .sutita-logo {
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
+}
+
+.sutita-info {
+    text-align: center;
+    width: 100%;
+}
+
+.sutita-info h2 {
+    margin: 0 0 8px 0;
+    font-size: 1.8rem;
+    color: var(--text-primary);
+}
+
+.sutita-subtitle {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.sutita-contacts {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    width: 100%;
+    max-width: 20%;
+}
+
+.contact-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 14px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    text-align: center;
+    align-items: center;
+}
+
+body[data-theme="dark"] .contact-card {
+    background: rgba(15, 23, 42, 0.58);
+}
+
+.contact-card:hover {
+    transform: translateY(-2px);
+    background: var(--table-row-hover);
+}
+
+.contact-icon {
+    flex-shrink: 0;
+    font-size: 1.8rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.contact-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.contact-info h3 {
+    margin: 0 0 6px 0;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.contact-info p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.contact-info a {
+    color: var(--brand);
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.18s ease;
+}
+
+.contact-info a:hover {
+    color: var(--brand-hover);
+    text-decoration: underline;
+}
+
+body[data-theme="dark"] .contact-info a:hover {
+    color: var(--brand-hover);
+}
+
+.footer-link {
+    color: var(--brand);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+    margin-left: 12px;
+}
+
+.footer-link:hover {
+    color: var(--brand-hover);
+    text-decoration: underline;
+}
+
+.footer p a,
+.footer p a:hover {
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.footer p a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+    .sutita-content {
+        gap: 24px;
+    }
+
+    .sutita-logo {
+        max-width: 180px;
+        max-height: 180px;
+    }
+
+    .sutita-info h2 {
+        font-size: 1.4rem;
+    }
+
+    .contact-card {
+        padding: 14px 16px;
+    }
+
+    .contact-icon {
+        font-size: 1.6rem;
+        width: 36px;
+        height: 36px;
+    }
+
+    .footer {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .footer-link {
+        margin-left: 0;
     }
 }

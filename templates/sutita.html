@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGDI - Contato</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="sutita-container">
+        <div class="sutita-logo-section">
+            <img src="{{ url_for('static', filename='assets/logo/Sutita.png') }}" alt="SGDI" class="sutita-logo">
+        </div>
+
+        <div class="sutita-info">
+            <h2>Entre em Contato 📞 </h2>
+        </div>
+
+        <div class="sutita-contacts">
+            <div class="contact-card">
+                <div class="contact-info">
+                    <h3>Matheus Durante</h3>
+                    <p>(RA) 1134-846</p>
+                </div>
+
+                <div class="contact-info">
+                    <h3>Maria Chehade</h3>
+                    <p>(RA) 1134-607</p>
+                </div>
+
+                <div class="contact-info">
+                    <h3>Higor Milani</h3>
+                    <p>(RA) 1135-818</p>
+                </div>
+
+                <div class="contact-info">
+                    <h3>Pablo Oliveira</h3>
+                    <p>(RA) 1134-335</p>
+                </div>
+
+                <div class="contact-info">
+                    <h3>Gabriela Lenz</h3>
+                    <p>(RA) 1134-940</p>
+                </div>
+
+                <div class="contact-info">
+                    <h3>Enzo Almeida</h3>
+                    <p>(RA) 1134-927</p>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var root = document.body;
+            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var currentTheme = localStorage.getItem('sgdi-theme') || (prefersDark ? 'dark' : 'light');
+            root.setAttribute('data-theme', currentTheme);
+        })();
+    </script>
+</body>
+</html>
+

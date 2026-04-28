@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-toolbar glass-panel-soft">
+    <div class="toolbar-inner">
+        <h2 style="margin: 0;">Editar Solicitante #{{ requester['id'] }}</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('solicitante') }}" class="button-link button-link-muted">Voltar</a>
+        </div>
+    </div>
+</div>
+
+<form id="form-editar-solicitante" method="POST" action="{{ url_for('editar_solicitante', requester_id=requester['id']) }}" class="form-card glass-panel-soft">
+    <div class="form-field">
+        <label for="nome">Nome:</label>
+        <input id="nome" type="text" name="nome" value="{{ form_data.get('nome', requester['nome']) }}" required>
+    </div>
+
+    <div class="form-field">
+        <label for="email">Email:</label>
+        <input id="email" type="email" name="email" value="{{ form_data.get('email', requester['email']) }}" required>
+    </div>
+
+    <div class="form-field">
+        <label for="cargo">Cargo:</label>
+        <input id="cargo" type="text" name="cargo" value="{{ form_data.get('cargo', requester['cargo']) }}" required>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit">Salvar</button>
+        <a href="{{ url_for('solicitante') }}" class="button-link button-link-muted">Cancelar</a>
+    </div>
+</form>
+
+<script>
+document.getElementById('form-editar-solicitante').addEventListener('submit', function (event) {
+    var nomeInput = this.querySelector('input[name="nome"]');
+    var emailInput = this.querySelector('input[name="email"]');
+    var cargoInput = this.querySelector('input[name="cargo"]');
+
+    var nome = (nomeInput.value || '').trim();
+    var email = (emailInput.value || '').trim();
+    var cargo = (cargoInput.value || '').trim();
+
+    if (!nome || !email || !cargo) {
+        event.preventDefault();
+        alert('Preencha nome, email e cargo antes de salvar.');
+
+        if (!nome) {
+            nomeInput.focus();
+        } else if (!email) {
+            emailInput.focus();
+        } else {
+            cargoInput.focus();
+        }
+    }
+});
+</script>
+{% endblock %}
+

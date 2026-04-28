@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="860" viewBox="0 0 1400 860">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #1f2937; }
+      .subtitle { font: 400 14px Arial, sans-serif; fill: #4b5563; }
+      .box-title { font: 700 18px Arial, sans-serif; fill: #111827; }
+      .box-text { font: 400 14px Arial, sans-serif; fill: #1f2937; }
+      .small { font: 400 12px Arial, sans-serif; fill: #374151; }
+      .box { stroke: #334155; stroke-width: 2; rx: 14; ry: 14; }
+      .arrow { stroke: #2563eb; stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
+      .layer-label { font: 700 13px Arial, sans-serif; fill: #0f172a; letter-spacing: 1px; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb" />
+    </marker>
+  </defs>
+
+  <rect width="1400" height="860" fill="#f8fafc" />
+  <text x="50" y="48" class="title">Arquitetura do projeto SGDI</text>
+  <text x="50" y="74" class="subtitle">Fluxo simples: navegador → Flask → templates/estáticos → SQLite. Testes e migrações aparecem como suporte.</text>
+
+  <text x="60" y="128" class="layer-label">CAMADA DE INTERFACE</text>
+  <rect x="50" y="140" width="250" height="120" class="box" fill="#dbeafe" />
+  <text x="75" y="178" class="box-title">Usuário / Navegador</text>
+  <text x="75" y="205" class="box-text">Abre a aplicação no browser</text>
+  <text x="75" y="228" class="box-text">Envia requisições HTTP</text>
+
+  <rect x="340" y="140" width="330" height="120" class="box" fill="#bfdbfe" />
+  <text x="365" y="178" class="box-title">app.py</text>
+  <text x="365" y="205" class="box-text">Rotas Flask: index, nova_demanda, editar,</text>
+  <text x="365" y="226" class="box-text">detalhes, solicitante, adicionar_comentario</text>
+
+  <rect x="720" y="140" width="300" height="120" class="box" fill="#dbeafe" />
+  <text x="745" y="178" class="box-title">templates/</text>
+  <text x="745" y="205" class="box-text">HTML renderizado pelo Flask</text>
+  <text x="745" y="228" class="box-text">base, index, detalhes, editar</text>
+
+  <rect x="1060" y="140" width="290" height="120" class="box" fill="#dbeafe" />
+  <text x="1085" y="178" class="box-title">static/</text>
+  <text x="1085" y="205" class="box-text">CSS e arquivos estáticos</text>
+  <text x="1085" y="228" class="box-text">Ex.: style.css e logo</text>
+
+  <path d="M300 200 L340 200" class="arrow" />
+  <path d="M670 200 L720 200" class="arrow" />
+  <path d="M1020 200 L1060 200" class="arrow" />
+
+  <text x="60" y="334" class="layer-label">CAMADA DE DADOS</text>
+  <rect x="50" y="346" width="260" height="140" class="box" fill="#dcfce7" />
+  <text x="75" y="384" class="box-title">models.py</text>
+  <text x="75" y="411" class="box-text">Definições do SQLAlchemy</text>
+  <text x="75" y="434" class="box-text">Modelos: Demanda e Comentario</text>
+
+  <rect x="350" y="346" width="260" height="140" class="box" fill="#bbf7d0" />
+  <text x="375" y="384" class="box-title">migrations/</text>
+  <text x="375" y="411" class="box-text">Flask-Migrate / Alembic</text>
+  <text x="375" y="434" class="box-text">Evolução do schema do banco</text>
+
+  <rect x="650" y="346" width="260" height="140" class="box" fill="#bbf7d0" />
+  <text x="675" y="384" class="box-title">init_db.py</text>
+  <text x="675" y="411" class="box-text">Criação/atualização inicial</text>
+  <text x="675" y="434" class="box-text">Pode preparar o banco local</text>
+
+  <rect x="950" y="346" width="400" height="140" class="box" fill="#86efac" />
+  <text x="975" y="384" class="box-title">SQLite</text>
+  <text x="975" y="411" class="box-text">Arquivo principal: demandas.db</text>
+  <text x="975" y="434" class="box-text">Tabelas de demandas, comentarios e solicitantes</text>
+
+  <path d="M310 416 L350 416" class="arrow" />
+  <path d="M610 416 L650 416" class="arrow" />
+  <path d="M910 416 L950 416" class="arrow" />
+
+  <text x="60" y="546" class="layer-label">SUPORTE E QUALIDADE</text>
+  <rect x="50" y="560" width="290" height="150" class="box" fill="#f3e8ff" />
+  <text x="75" y="598" class="box-title">tests/</text>
+  <text x="75" y="625" class="box-text">Testes e2e com banco isolado</text>
+  <text x="75" y="648" class="box-text">Valida rotas, regras e persistência</text>
+  <text x="75" y="671" class="box-text">Gera coverage para o SonarQube</text>
+
+  <rect x="375" y="560" width="310" height="150" class="box" fill="#f5d0fe" />
+  <text x="400" y="598" class="box-title">requirements*.txt</text>
+  <text x="400" y="625" class="box-text">Dependências do projeto e dos testes</text>
+  <text x="400" y="648" class="box-text">Flask, SQLAlchemy, Flask-Migrate, pytest</text>
+  <text x="400" y="671" class="box-text">Mantém o ambiente reproduzível</text>
+
+  <rect x="730" y="560" width="320" height="150" class="box" fill="#e0f2fe" />
+  <text x="755" y="598" class="box-title">README.md / docs/</text>
+  <text x="755" y="625" class="box-text">Guia de execução e documentação</text>
+  <text x="755" y="648" class="box-text">Inclui migrações, ADRs e changelog</text>
+  <text x="755" y="671" class="box-text">Ajuda a manter o projeto organizado</text>
+
+  <text x="50" y="796" class="small">Legenda: setas azuis = fluxo principal da aplicação.</text>
+</svg>
+

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-toolbar glass-panel-soft">
+    <div class="toolbar-inner">
+        <h2 style="margin: 0;">Solicitante #{{ requester['id'] }}</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('editar_solicitante', requester_id=requester['id']) }}" class="button-link">Editar</a>
+            <a href="{{ url_for('solicitante') }}" class="button-link button-link-muted">Voltar</a>
+        </div>
+    </div>
+</div>
+
+<div class="details-card glass-panel-soft">
+    <p><strong>Nome:</strong> {{ requester['nome'] }}</p>
+    <p><strong>Email:</strong> {{ requester['email'] }}</p>
+    <p><strong>Cargo:</strong> {{ requester['cargo'] }}</p>
+    <p><strong>Data de criação:</strong> {{ requester['data_criacao'] }}</p>
+</div>
+{% endblock %}
+

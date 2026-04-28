@@ -45,6 +45,18 @@ def db_path(tmp_path: Path) -> Path:
 
     cursor.execute(
         """
+        CREATE TABLE requesters (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            cargo TEXT NOT NULL,
+            data_criacao TEXT NOT NULL
+        )
+        """
+    )
+
+    cursor.execute(
+        """
         INSERT INTO demandas (id, titulo, descricao, solicitante, prioridade, data_criacao)
         VALUES (1, 'Corrigir bug no login', 'Usuários nao conseguem fazer login', 'Joao Silva', 'alta', '2024-01-15 10:30:00')
         """
@@ -59,6 +71,15 @@ def db_path(tmp_path: Path) -> Path:
         """
         INSERT INTO comentarios (id, demanda_id, comentario, autor, data)
         VALUES (1, 1, 'Vou investigar esse bug', 'Tech Team', '2024-01-15 11:00:00')
+        """
+    )
+    cursor.execute(
+        """
+        INSERT INTO requesters (id, nome, email, cargo, data_criacao)
+        VALUES
+          (1, 'Joao Silva', 'joao.silva@empresa.com', 'Analista', '2024-01-15 09:00:00'),
+          (2, 'Maria Santos', 'maria.santos@empresa.com', 'Coordenadora', '2024-01-15 09:05:00'),
+          (3, 'Tech Team', 'tech.team@empresa.com', 'Equipe Tecnica', '2024-01-15 09:10:00')
         """
     )
 
@@ -80,7 +101,6 @@ def client(db_path: Path, monkeypatch: pytest.MonkeyPatch):
     app_module.app.config.update(
         TESTING=True,
         SECRET_KEY="test-secret-key",
-        REQUESTERS=[dict(requester) for requester in app_module.DEFAULT_REQUESTERS],
     )
 
     with app_module.app.test_client() as test_client:
