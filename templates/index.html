@@ -82,7 +82,7 @@
 function deletarDemanda(id) {
     fetch('/deletar/' + id, { method: 'DELETE' })
         .then(function() {
-            window.location.href = '/';
+            globalThis.location.href = '/';
         })
         .catch(function() {
             alert('Erro ao deletar demanda.');
