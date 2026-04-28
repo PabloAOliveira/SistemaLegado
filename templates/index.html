@@ -40,9 +40,10 @@
         </thead>
         <tbody>
             {% for demanda in demandas %}
-            {% set p = demanda[4]|lower if demanda[4] else '' %}
-            {% set priority_row_class = 'priority-row-alta' if p == 'alta' else 'priority-row-media' if p == 'média' or p == 'media' else 'priority-row-baixa' if p == 'baixa' else 'priority-row-sem-valor' %}
-            <tr class="{{ priority_row_class }}">
+            {% set p = (demanda[4] or '') | lower %}
+            {% set _priority_map = {'alta': 'priority-row-alta', 'média': 'priority-row-media', 'media': 'priority-row-media', 'baixa': 'priority-row-baixa'} %}
+            {% set priority_row_class = _priority_map.get(p, 'priority-row-sem-valor') %}
+                <tr class="{{ priority_row_class }}">
                 <td>{{ demanda[0] }}</td>
                 <td>{{ demanda[1] }}</td>
                 <td>{{ demanda[3] }}</td>
