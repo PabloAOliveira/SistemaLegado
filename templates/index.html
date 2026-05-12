@@ -10,7 +10,7 @@
             <select name="prioridade" id="prioridade" onchange="this.form.submit()">
                 <option value="todas" {% if prioridade_filtro =="todas" or not prioridade_filtro %}selected{% endif %}>Todas</option>
                 <option value="alta" {% if prioridade_filtro =="alta" %}selected{% endif %}>Alta</option>
-                <option value="media" {% if prioridade_filtro =="media" or prioridade_filtro =="média" %}selected{% endif %}>Média</option>
+                <option value="media" {% if prioridade_filtro =="media" or prioridade_filtro =="media" %}selected{% endif %}>Media</option>
                 <option value="baixa" {% if prioridade_filtro =="baixa" %}selected{% endif %}>Baixa</option>
             </select>
         </form>
@@ -21,29 +21,32 @@
 <div class="table-scroll">
     <table class="table-demandas">
         <colgroup>
-            <col style="width: 8%;">
-            <col style="width: 28%;">
-            <col style="width: 19%;">
+            <col style="width: 7%;">
+            <col style="width: 26%;">
+            <col style="width: 17%;">
+            <col style="width: 12%;">
+            <col style="width: 12%;">
             <col style="width: 14%;">
-            <col style="width: 16%;">
-            <col style="width: 15%;">
+            <col style="width: 12%;">
         </colgroup>
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Título</th>
+                <th>Titulo</th>
                 <th>Solicitante</th>
                 <th>Prioridade</th>
+                <th>Status</th>
                 <th>Data</th>
-                <th>Ações</th>
+                <th>Acoes</th>
             </tr>
         </thead>
         <tbody>
             {% for demanda in demandas %}
             {% set p = (demanda[4] or '') | lower %}
-            {% set _priority_map = {'alta': 'priority-row-alta', 'média': 'priority-row-media', 'media': 'priority-row-media', 'baixa': 'priority-row-baixa'} %}
+            {% set _priority_map = {'alta': 'priority-row-alta', 'media': 'priority-row-media', 'baixa': 'priority-row-baixa'} %}
             {% set priority_row_class = _priority_map.get(p, 'priority-row-sem-valor') %}
-                <tr class="{{ priority_row_class }}">
+            {% set s = demanda[6] if demanda|length > 6 and demanda[6] else 'aberta' %}
+            <tr class="{{ priority_row_class }}">
                 <td>{{ demanda[0] }}</td>
                 <td>{{ demanda[1] }}</td>
                 <td>{{ demanda[3] }}</td>
@@ -51,13 +54,17 @@
                 <td>
                     {% if p == 'alta' %}
                         <span class="priority-text">Alta</span>
-                    {% elif p == 'média' or p == 'media' %}
-                        <span class="priority-text">Média</span>
+                    {% elif p == 'media' %}
+                        <span class="priority-text">Media</span>
                     {% elif p == 'baixa' %}
                         <span class="priority-text">Baixa</span>
                     {% else %}
                         <span class="priority-text">---</span>
                     {% endif %}
+                </td>
+
+                <td>
+                    <span class="status-pill status-{{ s }}">{{ 'Concluida' if s == 'concluida' else 'Cancelada' if s == 'cancelada' else 'Aberta' }}</span>
                 </td>
 
                 <td>
@@ -77,7 +84,6 @@
         </tbody>
     </table>
 </div>
-
 
 <script>
 function deletarDemanda(id) {

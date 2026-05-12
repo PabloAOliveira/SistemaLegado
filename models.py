@@ -14,6 +14,10 @@ class Demanda(db.Model):
     solicitante = db.Column(db.Text)
     prioridade = db.Column(db.Text, server_default='')
     data_criacao = db.Column(db.Text)
+    status = db.Column(db.Text, nullable=False, server_default='aberta')
+    responsavel = db.Column(db.Text)
+    prazo = db.Column(db.Text)
+    data_conclusao = db.Column(db.Text)
 
 
 class Comentario(db.Model):

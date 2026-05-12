@@ -28,12 +28,34 @@
     </div>
 
     <div class="form-field">
+        <label>Responsavel:<br>
+            <select name="responsavel" required>
+                <option value="">Selecione um responsavel</option>
+                {% for person in people %}
+                <option value="{{ person }}" {% if form_data.get('responsavel') == person %}selected{% endif %}>{{ person }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+
+    <div class="form-field">
         <label>Prioridade:<br>
             {% set selected_prioridade = form_data.get('prioridade', 'baixa') %}
             <select name="prioridade" required>
                 <option value="baixa" {% if selected_prioridade == 'baixa' %}selected{% endif %}>Baixa</option>
                 <option value="media" {% if selected_prioridade == 'media' %}selected{% endif %}>Media</option>
                 <option value="alta" {% if selected_prioridade == 'alta' %}selected{% endif %}>Alta</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="form-field">
+        <label>Status:<br>
+            {% set selected_status = form_data.get('status', 'aberta') %}
+            <select name="status" required>
+                <option value="aberta" {% if selected_status == 'aberta' %}selected{% endif %}>Aberta</option>
+                <option value="concluida" {% if selected_status == 'concluida' %}selected{% endif %}>Concluida</option>
+                <option value="cancelada" {% if selected_status == 'cancelada' %}selected{% endif %}>Cancelada</option>
             </select>
         </label>
     </div>
@@ -49,21 +71,25 @@ document.getElementById('form-nova-demanda').addEventListener('submit', function
     var tituloInput = this.querySelector('input[name="titulo"]');
     var descricaoInput = this.querySelector('textarea[name="descricao"]');
     var solicitanteInput = this.querySelector('select[name="solicitante"]');
+    var responsavelInput = this.querySelector('select[name="responsavel"]');
 
     var titulo = (tituloInput.value || '').trim();
     var descricao = (descricaoInput.value || '').trim();
     var solicitante = (solicitanteInput.value || '').trim();
+    var responsavel = (responsavelInput.value || '').trim();
 
-    if (!titulo || !descricao || !solicitante) {
+    if (!titulo || !descricao || !solicitante || !responsavel) {
         event.preventDefault();
-        alert('Preencha obrigatoriamente o Titulo, a Descricao e o Solicitante antes de salvar.');
+        alert('Preencha obrigatoriamente o Titulo, a Descricao, o Solicitante e o Responsavel antes de salvar.');
 
         if (!titulo) {
             tituloInput.focus();
-        } else if (descricao) {
+        } else if (!descricao) {
+            descricaoInput.focus();
+        } else if (!solicitante) {
             solicitanteInput.focus();
         } else {
-            descricaoInput.focus();
+            responsavelInput.focus();
         }
     }
 });

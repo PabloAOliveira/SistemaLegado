@@ -20,6 +20,9 @@
         <div class="header-inner">
             <h1><a href="{{ url_for('index') }}" aria-label="Ir para página inicial">SGDI</a></h1>
             <div class="menu">
+                {% if request.endpoint != 'dashboard' %}
+                    <a href="{{ url_for('dashboard') }}">KPIs</a>
+                {% endif %}
                 {% if not request.path.startswith('/solicitante') %}
                     <a href="{{ url_for('solicitante') }}">Solicitante</a>
                 {% endif %}

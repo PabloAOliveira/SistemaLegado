@@ -178,6 +178,201 @@ h4 {
     flex-shrink: 0;
 }
 
+.dashboard-kpis {
+    display: grid;
+    grid-template-columns: 1.1fr 1.6fr 1.4fr 1.2fr 1fr;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.dashboard-kpis-page {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: start;
+}
+
+.kpi-card {
+    min-height: 144px;
+    padding: 14px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.kpi-card h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.25;
+}
+
+.kpi-card > strong {
+    font-size: 2.8rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.kpi-card-total > strong,
+.kpi-card-resolution > strong {
+    font-size: 4rem;
+}
+
+.kpi-card span,
+.kpi-card small {
+    color: var(--text-secondary);
+}
+
+.kpi-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.kpi-eyebrow.attention {
+    color: #b91c1c;
+}
+
+.kpi-status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: auto;
+}
+
+.kpi-status-grid div {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255, 255, 255, 0.48);
+}
+
+body[data-theme="dark"] .kpi-status-grid div {
+    background: rgba(15, 23, 42, 0.42);
+}
+
+.kpi-status-grid strong {
+    display: block;
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.kpi-status-grid span,
+.kpi-status-grid small {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.78rem;
+}
+
+.critical-list,
+.responsible-list {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.critical-list {
+    overflow: hidden;
+}
+
+.responsible-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    scrollbar-color: var(--table-scroll-thumb) var(--table-scroll-track);
+    scrollbar-width: thin;
+}
+
+.responsible-list::-webkit-scrollbar {
+    width: 10px;
+}
+
+.responsible-list::-webkit-scrollbar-track {
+    background: var(--table-scroll-track);
+    border-radius: 999px;
+}
+
+.responsible-list::-webkit-scrollbar-thumb {
+    background: var(--table-scroll-thumb);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.critical-list a,
+.responsible-list div {
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.46);
+    border: 1px solid var(--surface-border);
+}
+
+body[data-theme="dark"] .critical-list a,
+body[data-theme="dark"] .responsible-list div {
+    background: rgba(15, 23, 42, 0.42);
+}
+
+.critical-list a {
+    display: block;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.critical-list small {
+    display: block;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.responsible-list div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.responsible-list span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.responsible-list strong {
+    font-variant-numeric: tabular-nums;
+}
+
+.empty-kpi {
+    font-size: 0.84rem;
+}
+
+.dashboard-kpis-page .kpi-card-responsible {
+    min-height: 260px;
+    max-height: 420px;
+}
+
+@media (max-width: 1200px) {
+    .dashboard-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .kpi-card-total,
+    .kpi-card-resolution {
+        min-height: 128px;
+    }
+}
+
 .toolbar-inner {
     display: flex;
     align-items: center;
@@ -361,6 +556,7 @@ button:hover,
 
 input[type="text"],
 input[type="email"],
+input[type="date"],
 textarea,
 select {
     display: block;
@@ -376,6 +572,7 @@ select {
 
 body[data-theme="dark"] input[type="text"],
 body[data-theme="dark"] input[type="email"],
+body[data-theme="dark"] input[type="date"],
 body[data-theme="dark"] textarea,
 body[data-theme="dark"] select {
     background: rgba(15, 23, 42, 0.55);
@@ -830,6 +1027,58 @@ body[data-theme="dark"] .row-actions .action-delete {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(100, 116, 139, 0.28);
+    background: rgba(100, 116, 139, 0.12);
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.status-aberta {
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.28);
+}
+
+.status-concluida {
+    color: #15803d;
+    background: rgba(22, 163, 74, 0.12);
+    border-color: rgba(22, 163, 74, 0.28);
+}
+
+.status-cancelada {
+    color: #64748b;
+    background: rgba(100, 116, 139, 0.12);
+    border-color: rgba(100, 116, 139, 0.24);
+}
+
+body[data-theme="dark"] .status-aberta {
+    color: #bfdbfe;
+    background: rgba(37, 99, 235, 0.2);
+    border-color: rgba(96, 165, 250, 0.34);
+}
+
+body[data-theme="dark"] .status-concluida {
+    color: #86efac;
+    background: rgba(22, 163, 74, 0.2);
+    border-color: rgba(74, 222, 128, 0.34);
+}
+
+body[data-theme="dark"] .status-cancelada {
+    color: #cbd5e1;
+    background: rgba(51, 65, 85, 0.52);
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
 .table-demandas tbody tr.priority-row-alta .priority-text {
     color: #b91c1c;
     background: rgba(220, 38, 38, 0.12);
@@ -902,6 +1151,22 @@ body[data-theme="dark"] .table-demandas tbody tr.priority-row-sem-valor .priorit
         padding: 16px;
     }
 
+    .dashboard-kpis {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+        max-height: 38vh;
+        padding-right: 4px;
+    }
+
+    .kpi-card {
+        min-height: 132px;
+    }
+
+    .kpi-card-total > strong,
+    .kpi-card-resolution > strong {
+        font-size: 3.2rem;
+    }
+
     .header {
         padding: 0 12px;
     }
@@ -942,6 +1207,11 @@ body[data-theme="dark"] .table-demandas tbody tr.priority-row-sem-valor .priorit
 
     .priority-text {
         font-size: 0.74rem;
+    }
+
+    .status-pill {
+        min-width: 82px;
+        font-size: 0.72rem;
     }
 }
 
