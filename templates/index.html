@@ -35,6 +35,12 @@
             <form id="export-form" method="POST">
                 <input type="hidden" name="prioridade_filtro" value="{{ prioridade_filtro or 'todas' }}">
 
+                <label for="relatorio_tipo">Tipo de relatório:</label>
+                <select name="relatorio_tipo" id="relatorio_tipo">
+                    <option value="completo">Relatório completo</option>
+                    <option value="atrasadas">Demandas atrasadas</option>
+                </select>
+
                 <div class="export-options">
                     <button type="submit" formaction="/export/excel" class="export-option excel-btn" title="Exportar em formato Excel">
                         <span class="export-icon">📊</span>
