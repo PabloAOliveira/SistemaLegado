@@ -3,10 +3,17 @@ import sqlite3
 import secrets
 import datetime
 from contextlib import closing
-from flask import Flask, flash, redirect, render_template, request, url_for
+from io import BytesIO
+from flask import Flask, flash, redirect, render_template, request, url_for, send_file
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from models import db
+from openpyxl import Workbook
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib import colors
 
 app = Flask(__name__)
 load_dotenv()
@@ -453,6 +460,236 @@ def adicionar_comentario(demanda_id):
         flash('Erro ao adicionar comentário!')
 
     return redirect(url_for('detalhes', demanda_id=demanda_id))
+
+
+def get_company_name():
+    """Retorna o nome da empresa para usar nos relatórios"""
+    return os.getenv("COMPANY_NAME", "SGDI - Sistema de Gestão de Demandas")
+
+
+def format_priority_filter_label(prioridade_filtro):
+    """Formata o rótulo do filtro de prioridade para exibição"""
+    if prioridade_filtro == 'todas' or not prioridade_filtro:
+        return "Todas as prioridades"
+    elif prioridade_filtro == 'alta':
+        return "Prioridade Alta"
+    elif prioridade_filtro in ('media', 'média'):
+        return "Prioridade Média"
+    elif prioridade_filtro == 'baixa':
+        return "Prioridade Baixa"
+    return prioridade_filtro
+
+
+def build_export_header(prioridade_filtro):
+    """Constrói o cabeçalho do relatório com empresa e data"""
+    company = get_company_name()
+    data_geracao = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    filtro = format_priority_filter_label(prioridade_filtro)
+    
+    return {
+        'company': company,
+        'data_geracao': data_geracao,
+        'filtro': filtro
+    }
+
+
+def build_demandas_data(demandas):
+    """Constrói array de dados formatados para exportação"""
+    data = [['ID', 'Título', 'Solicitante', 'Prioridade', 'Data Criação']]
+    
+    for demanda in demandas:
+        data_partes = demanda[5].split(' ')
+        date_parts = data_partes[0].split('-')
+        data_formatada = f"{date_parts[2]}/{date_parts[1]}/{date_parts[0]} {data_partes[1][:5]}"
+        
+        data.append([
+            str(demanda[0]),
+            demanda[1],
+            demanda[3],
+            demanda[4] or '---',
+            data_formatada
+        ])
+    
+    return data
+
+
+@app.route('/export/excel', methods=['POST'])
+def export_excel():
+    """Exporta demandas em formato Excel"""
+    prioridade_filtro = request.form.get('prioridade_filtro', 'todas').strip().lower()
+    
+    # Fetch dados
+    if prioridade_filtro == 'todas' or not prioridade_filtro:
+        demandas = fetch_all("""
+            SELECT * FROM demandas
+            ORDER BY CASE LOWER(prioridade)
+                         WHEN 'alta' THEN 1
+                         WHEN 'média' THEN 2
+                         WHEN 'media' THEN 2
+                         WHEN 'baixa' THEN 3
+                         ELSE 4 END,
+                    data_criacao DESC
+        """)
+    else:
+        demandas = fetch_all("""
+            SELECT * FROM demandas
+            WHERE LOWER(prioridade) = ?
+            ORDER BY data_criacao DESC
+        """, (prioridade_filtro,))
+    
+    # Montar header
+    header = build_export_header(prioridade_filtro)
+    
+    # Criar workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Demandas"
+    
+    # Header com informações da empresa
+    ws['A1'] = header['company']
+    ws['A1'].font = ws['A1'].font.copy()
+    ws['A1'].font = ws['A1'].font.copy()
+    ws['A1'].font = ws['A1'].font.copy()
+    ws.merge_cells('A1:E1')
+    
+    ws['A2'] = f"Gerado em: {header['data_geracao']}"
+    ws.merge_cells('A2:E2')
+    
+    ws['A3'] = f"Filtro: {header['filtro']}"
+    ws.merge_cells('A3:E3')
+    
+    ws['A4'] = ""  # Linha em branco
+    
+    # Dados
+    dados = build_demandas_data(demandas)
+    for row_idx, row_data in enumerate(dados, start=5):
+        for col_idx, cell_value in enumerate(row_data, start=1):
+            ws.cell(row=row_idx, column=col_idx, value=cell_value)
+    
+    # Formatar larguras
+    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['B'].width = 28
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 14
+    ws.column_dimensions['E'].width = 16
+    
+    # Salvar em bytes
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    filename = f"Demandas_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
+
+
+@app.route('/export/pdf', methods=['POST'])
+def export_pdf():
+    """Exporta demandas em formato PDF"""
+    prioridade_filtro = request.form.get('prioridade_filtro', 'todas').strip().lower()
+    
+    # Fetch dados
+    if prioridade_filtro == 'todas' or not prioridade_filtro:
+        demandas = fetch_all("""
+            SELECT * FROM demandas
+            ORDER BY CASE LOWER(prioridade)
+                         WHEN 'alta' THEN 1
+                         WHEN 'média' THEN 2
+                         WHEN 'media' THEN 2
+                         WHEN 'baixa' THEN 3
+                         ELSE 4 END,
+                    data_criacao DESC
+        """)
+    else:
+        demandas = fetch_all("""
+            SELECT * FROM demandas
+            WHERE LOWER(prioridade) = ?
+            ORDER BY data_criacao DESC
+        """, (prioridade_filtro,))
+    
+    # Montar header
+    header = build_export_header(prioridade_filtro)
+    
+    # Criar PDF
+    output = BytesIO()
+    doc = SimpleDocTemplate(output, pagesize=letter, rightMargin=72, leftMargin=72,
+                           topMargin=72, bottomMargin=36)
+    
+    # Estilos
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        textColor=colors.HexColor('#0f172a'),
+        spaceAfter=6,
+        alignment=1  # Center
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'CustomSubtitle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.HexColor('#475569'),
+        spaceAfter=4,
+        alignment=1  # Center
+    )
+    
+    # Conteúdo
+    story = []
+    
+    # Título
+    story.append(Paragraph(header['company'], title_style))
+    story.append(Spacer(1, 0.15 * inch))
+    
+    # Data e filtro
+    story.append(Paragraph(f"<b>Data de geração:</b> {header['data_geracao']}", subtitle_style))
+    story.append(Paragraph(f"<b>Filtro:</b> {header['filtro']}", subtitle_style))
+    story.append(Spacer(1, 0.2 * inch))
+    
+    # Tabela
+    dados = build_demandas_data(demandas)
+    
+    table = Table(dados, colWidths=[0.6*inch, 2.2*inch, 1.5*inch, 1.2*inch, 1.3*inch])
+    
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbe4ff')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#0f172a')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e1')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    
+    story.append(table)
+    story.append(Spacer(1, 0.3 * inch))
+    
+    # Rodapé com filtro aplicado
+    footer_text = f"Relatório gerado com: {header['filtro']} · {datetime.datetime.now().strftime('%b–%b %Y')}"
+    story.append(Paragraph(f"<i>{footer_text}</i>", subtitle_style))
+    
+    # Build PDF
+    doc.build(story)
+    output.seek(0)
+    
+    filename = f"Demandas_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    return send_file(
+        output,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 if __name__ == '__main__':

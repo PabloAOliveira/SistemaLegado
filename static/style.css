@@ -198,6 +198,12 @@ h4 {
     min-width: 160px;
 }
 
+.toolbar-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
 .toolbar-inner .button-link {
     margin-left: auto;
 }
@@ -1104,36 +1110,241 @@ body[data-theme="dark"] .contact-info a:hover {
     text-decoration: underline;
 }
 
+/* Modal de Exportação */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.24s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    max-width: 420px;
+    width: 100%;
+    background: var(--surface);
+    border-radius: 18px;
+    border: 1px solid var(--surface-border);
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.24s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid var(--surface-border);
+    flex-shrink: 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    background: none;
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s ease;
+}
+
+.modal-close:hover {
+    background: rgba(79, 70, 229, 0.12);
+    color: var(--brand);
+    border-color: var(--brand);
+}
+
+.modal-close:focus {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+.modal-body {
+    padding: 24px;
+    flex: 1;
+    min-height: 0;
+}
+
+.modal-body p {
+    margin: 0 0 16px 0;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.export-option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 2px solid var(--surface-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: left;
+    font-family: inherit;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.export-option:hover {
+    border-color: var(--brand);
+    background: rgba(79, 70, 229, 0.08);
+    transform: translateX(2px);
+}
+
+.export-option:focus {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+.export-option.excel-btn {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.export-option.excel-btn:hover {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.export-option.pdf-btn {
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.export-option.pdf-btn:hover {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.export-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.export-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.export-text strong {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    display: block;
+}
+
+.export-text small {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+    display: block;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--surface-border);
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-info {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+    font-style: italic;
+}
+
+body[data-theme="dark"] .export-option {
+    background: rgba(15, 23, 42, 0.5);
+}
+
+body[data-theme="dark"] .export-option:hover {
+    background: rgba(79, 70, 229, 0.12);
+}
+
 @media (max-width: 720px) {
-    .sutita-content {
-        gap: 24px;
+    .modal-overlay {
+        padding: 16px;
     }
 
-    .sutita-logo {
-        max-width: 180px;
-        max-height: 180px;
+    .modal-content {
+        max-width: 100%;
+        width: 100%;
     }
 
-    .sutita-info h2 {
-        font-size: 1.4rem;
+    .export-option {
+        padding: 12px 14px;
+        gap: 12px;
     }
 
-    .contact-card {
-        padding: 14px 16px;
+    .export-icon {
+        font-size: 1.5rem;
     }
 
-    .contact-icon {
-        font-size: 1.6rem;
-        width: 36px;
-        height: 36px;
+    .modal-header {
+        padding: 16px;
     }
 
-    .footer {
-        flex-wrap: wrap;
-        gap: 8px;
+    .modal-body {
+        padding: 16px;
     }
 
-    .footer-link {
-        margin-left: 0;
+    .modal-footer {
+        padding: 12px 16px;
     }
 }

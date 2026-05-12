@@ -14,7 +14,50 @@
                 <option value="baixa" {% if prioridade_filtro =="baixa" %}selected{% endif %}>Baixa</option>
             </select>
         </form>
-        <a href="/nova_demanda" class="button-link">+ Nova Demanda</a>
+        <div class="toolbar-actions">
+            <button type="button" class="button-link" id="export-btn" aria-label="Exportar dados">📥 Exportar</button>
+            <a href="/nova_demanda" class="button-link">+ Nova Demanda</a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Exportação -->
+<div id="export-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content glass-panel">
+        <div class="modal-header">
+            <h3>Exportar Demandas</h3>
+            <button type="button" class="modal-close" id="modal-close" aria-label="Fechar modal">✕</button>
+        </div>
+
+        <div class="modal-body">
+            <p>Escolha o formato desejado para exportar os dados:</p>
+
+            <form id="export-form" method="POST">
+                <input type="hidden" name="prioridade_filtro" value="{{ prioridade_filtro or 'todas' }}">
+
+                <div class="export-options">
+                    <button type="submit" formaction="/export/excel" class="export-option excel-btn" title="Exportar em formato Excel">
+                        <span class="export-icon">📊</span>
+                        <span class="export-text">
+                            <strong>Excel</strong>
+                            <small>Formato XLSX</small>
+                        </span>
+                    </button>
+
+                    <button type="submit" formaction="/export/pdf" class="export-option pdf-btn" title="Exportar em formato PDF">
+                        <span class="export-icon">📄</span>
+                        <span class="export-text">
+                            <strong>PDF</strong>
+                            <small>Relatório formatado</small>
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <p class="modal-info">Os filtros aplicados serão incluídos no relatório.</p>
+        </div>
     </div>
 </div>
 
@@ -89,6 +132,41 @@ function deletarDemanda(id) {
             alert('Erro ao deletar demanda.');
         });
 }
+
+// Modal de exportação
+(function() {
+    const modal = document.getElementById('export-modal');
+    const exportBtn = document.getElementById('export-btn');
+    const modalClose = document.getElementById('modal-close');
+
+    exportBtn.addEventListener('click', function() {
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+        modalClose.focus();
+    });
+
+    modalClose.addEventListener('click', function() {
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        exportBtn.focus();
+    });
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+            exportBtn.focus();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display !== 'none') {
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+            exportBtn.focus();
+        }
+    });
+})();
 </script>
 
 {% endblock %}
