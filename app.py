@@ -513,6 +513,45 @@ def build_demandas_data(demandas):
     return data
 
 
+def calculate_kpis(demandas):
+    """Calcula KPIs para os relatórios"""
+    total = len(demandas)
+    
+    # Contar por prioridade (assumindo: Alta=crítica, Média=normal, Baixa=baixa prioridade)
+    criticas = sum(1 for d in demandas if d[4] and d[4].lower() in ('alta', 'crítica'))
+    media = sum(1 for d in demandas if d[4] and d[4].lower() in ('média', 'media'))
+    baixa = sum(1 for d in demandas if d[4] and d[4].lower() in ('baixa', 'baixo'))
+    sem_prioridade = sum(1 for d in demandas if not d[4] or d[4].strip() == '')
+    
+    # Contar por responsável
+    por_responsavel = {}
+    for demanda in demandas:
+        solicitante = demanda[3] or 'Sem Solicitante'
+        if solicitante not in por_responsavel:
+            por_responsavel[solicitante] = 0
+        por_responsavel[solicitante] += 1
+    
+    # Ordenar por quantidade (descendente)
+    por_responsavel_ordenado = sorted(por_responsavel.items(), key=lambda x: x[1], reverse=True)
+    
+    # Calcular percentuais
+    pct_criticas = (criticas / total * 100) if total > 0 else 0
+    pct_media = (media / total * 100) if total > 0 else 0
+    pct_baixa = (baixa / total * 100) if total > 0 else 0
+    
+    return {
+        'total': total,
+        'criticas': criticas,
+        'pct_criticas': pct_criticas,
+        'media': media,
+        'pct_media': pct_media,
+        'baixa': baixa,
+        'pct_baixa': pct_baixa,
+        'sem_prioridade': sem_prioridade,
+        'por_responsavel': por_responsavel_ordenado,
+    }
+
+
 @app.route('/export/excel', methods=['POST'])
 def export_excel():
     """Exporta demandas em formato Excel"""
@@ -537,39 +576,84 @@ def export_excel():
             ORDER BY data_criacao DESC
         """, (prioridade_filtro,))
     
-    # Montar header
+    # Montar header e KPIs
     header = build_export_header(prioridade_filtro)
-    
+    kpis = calculate_kpis(demandas)
+
     # Criar workbook
     wb = Workbook()
     ws = wb.active
     ws.title = "Demandas"
     
+    row = 1
+    
     # Header com informações da empresa
-    ws['A1'] = header['company']
-    ws['A1'].font = ws['A1'].font.copy()
-    ws['A1'].font = ws['A1'].font.copy()
-    ws['A1'].font = ws['A1'].font.copy()
-    ws.merge_cells('A1:E1')
+    ws[f'A{row}'] = header['company']
+    ws.merge_cells(f'A{row}:E{row}')
+    row += 1
     
-    ws['A2'] = f"Gerado em: {header['data_geracao']}"
-    ws.merge_cells('A2:E2')
+    ws[f'A{row}'] = f"Gerado em: {header['data_geracao']}"
+    ws.merge_cells(f'A{row}:E{row}')
+    row += 1
     
-    ws['A3'] = f"Filtro: {header['filtro']}"
-    ws.merge_cells('A3:E3')
+    ws[f'A{row}'] = f"Filtro: {header['filtro']}"
+    ws.merge_cells(f'A{row}:E{row}')
+    row += 2
     
-    ws['A4'] = ""  # Linha em branco
+    # KPI 1: Total de demandas
+    ws[f'A{row}'] = "📊 TOTAL DE DEMANDAS"
+    ws[f'A{row}'].font = ws[f'A{row}'].font.copy()
+    ws.merge_cells(f'A{row}:B{row}')
+    ws[f'C{row}'] = kpis['total']
+    row += 1
     
-    # Dados
+    # KPI 2: Por Prioridade
+    ws[f'A{row}'] = "Demandas por Prioridade"
+    ws.merge_cells(f'A{row}:E{row}')
+    row += 1
+    
+    ws[f'A{row}'] = "Alta (Crítica)"
+    ws[f'B{row}'] = kpis['criticas']
+    ws[f'C{row}'] = f"{kpis['pct_criticas']:.1f}%"
+    row += 1
+    
+    ws[f'A{row}'] = "Média"
+    ws[f'B{row}'] = kpis['media']
+    ws[f'C{row}'] = f"{kpis['pct_media']:.1f}%"
+    row += 1
+    
+    ws[f'A{row}'] = "Baixa"
+    ws[f'B{row}'] = kpis['baixa']
+    ws[f'C{row}'] = f"{kpis['pct_baixa']:.1f}%"
+    row += 2
+
+    # KPI 3: Por Responsável
+    ws[f'A{row}'] = "Demandas por Responsável"
+    ws.merge_cells(f'A{row}:C{row}')
+    row += 1
+
+    for responsavel, quantidade in kpis['por_responsavel']:
+        ws[f'A{row}'] = responsavel
+        ws[f'B{row}'] = quantidade
+        row += 1
+
+    row += 1
+
+    # Tabela de dados
+    ws[f'A{row}'] = "DETALHES DAS DEMANDAS"
+    ws.merge_cells(f'A{row}:E{row}')
+    row += 1
+    
     dados = build_demandas_data(demandas)
-    for row_idx, row_data in enumerate(dados, start=5):
+    for row_data in dados:
         for col_idx, cell_value in enumerate(row_data, start=1):
-            ws.cell(row=row_idx, column=col_idx, value=cell_value)
-    
+            ws.cell(row=row, column=col_idx, value=cell_value)
+        row += 1
+
     # Formatar larguras
-    ws.column_dimensions['A'].width = 8
-    ws.column_dimensions['B'].width = 28
-    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 14
+    ws.column_dimensions['C'].width = 14
     ws.column_dimensions['D'].width = 14
     ws.column_dimensions['E'].width = 16
     
@@ -611,8 +695,9 @@ def export_pdf():
             ORDER BY data_criacao DESC
         """, (prioridade_filtro,))
     
-    # Montar header
+    # Montar header e KPIs
     header = build_export_header(prioridade_filtro)
+    kpis = calculate_kpis(demandas)
     
     # Criar PDF
     output = BytesIO()
@@ -639,6 +724,24 @@ def export_pdf():
         alignment=1  # Center
     )
     
+    kpi_title_style = ParagraphStyle(
+        'KPITitle',
+        parent=styles['Heading2'],
+        fontSize=12,
+        textColor=colors.HexColor('#1f2937'),
+        spaceAfter=8,
+        spaceBefore=6,
+    )
+    
+    kpi_value_style = ParagraphStyle(
+        'KPIValue',
+        parent=styles['Normal'],
+        fontSize=14,
+        textColor=colors.HexColor('#2563eb'),
+        spaceAfter=4,
+        fontName='Helvetica-Bold',
+    )
+    
     # Conteúdo
     story = []
     
@@ -649,9 +752,80 @@ def export_pdf():
     # Data e filtro
     story.append(Paragraph(f"<b>Data de geração:</b> {header['data_geracao']}", subtitle_style))
     story.append(Paragraph(f"<b>Filtro:</b> {header['filtro']}", subtitle_style))
+    story.append(Spacer(1, 0.25 * inch))
+    
+    # KPI 1: Total de Demandas (destaque)
+    story.append(Paragraph("📊 TOTAL DE DEMANDAS", kpi_title_style))
+    story.append(Paragraph(f"<b style='font-size: 28'>{kpis['total']}</b>", 
+                          ParagraphStyle('TotalKPI', parent=styles['Normal'], alignment=1, spaceAfter=12)))
+    story.append(Spacer(1, 0.1 * inch))
+    
+    # KPI 2: Por Prioridade
+    story.append(Paragraph("📌 DEMANDAS POR PRIORIDADE", kpi_title_style))
+    
+    priority_data = [
+        ['Críticas (Alta)', f"{kpis['criticas']}", f"{kpis['pct_criticas']:.1f}%"],
+        ['Média', f"{kpis['media']}", f"{kpis['pct_media']:.1f}%"],
+        ['Baixa', f"{kpis['baixa']}", f"{kpis['pct_baixa']:.1f}%"],
+    ]
+    
+    priority_table = Table(priority_data, colWidths=[2.5*inch, 1*inch, 1*inch])
+    priority_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#fef3c7')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#b45309')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e1')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#fef9f3')]),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(priority_table)
     story.append(Spacer(1, 0.2 * inch))
     
-    # Tabela
+    # KPI 3: Demandas Críticas (Atenção)
+    if kpis['criticas'] > 0:
+        story.append(Paragraph("⚠️ DEMANDAS CRÍTICAS", ParagraphStyle(
+            'CriticalTitle', parent=styles['Heading2'], fontSize=12, 
+            textColor=colors.HexColor('#dc2626'), spaceAfter=8, spaceBefore=6
+        )))
+        
+        story.append(Paragraph(f"<b>{kpis['criticas']} demanda(s) com prioridade Alta requer(em) atenção imediata</b>", 
+                              subtitle_style))
+        story.append(Spacer(1, 0.1 * inch))
+    
+    # KPI 4: Por Responsável
+    story.append(Paragraph("👥 DEMANDAS POR RESPONSÁVEL", kpi_title_style))
+    
+    responsavel_data = [['Responsável', 'Demandas']]
+    for responsavel, quantidade in kpis['por_responsavel'][:10]:  # Limitar a 10 primeiros
+        responsavel_data.append([responsavel, str(quantidade)])
+    
+    responsavel_table = Table(responsavel_data, colWidths=[3*inch, 1*inch])
+    responsavel_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#0f172a')),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e1')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(responsavel_table)
+    story.append(Spacer(1, 0.25 * inch))
+    
+    # Tabela de Detalhes
+    story.append(Paragraph("📋 DETALHES DAS DEMANDAS", kpi_title_style))
     dados = build_demandas_data(demandas)
     
     table = Table(dados, colWidths=[0.6*inch, 2.2*inch, 1.5*inch, 1.2*inch, 1.3*inch])
