@@ -9,11 +9,14 @@ from flask_migrate import Migrate
 from dotenv import load_dotenv
 from models import db
 from openpyxl import Workbook
+from openpyxl.chart import PieChart, Reference
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib import colors
+from reportlab.graphics.charts.piecharts import Pie
+from reportlab.graphics.shapes import Drawing
 
 app = Flask(__name__)
 load_dotenv()
@@ -698,6 +701,44 @@ def export_excel():
             ws.cell(row=row, column=col_idx, value=cell_value)
         row += 1
 
+    row += 1
+
+    # Pizza: demandas por prioridade (percentual)
+    ws[f'A{row}'] = "DEMANDAS POR PRIORIDADE"
+    ws.merge_cells(f'A{row}:C{row}')
+    row += 1
+
+    ws[f'A{row}'] = "Prioridade"
+    ws[f'B{row}'] = "Quantidade"
+    ws[f'C{row}'] = "Percentual"
+    start_pie_row = row
+    row += 1
+
+    total = kpis['total'] or 0
+    prioridade_rows = [
+        ("Críticas (Alta)", kpis['criticas']),
+        ("Média", kpis['media']),
+        ("Baixa", kpis['baixa']),
+    ]
+
+    for label, count in prioridade_rows:
+        pct = (count / total * 100) if total > 0 else 0
+        ws[f'A{row}'] = label
+        ws[f'B{row}'] = count
+        ws[f'C{row}'] = f"{pct:.1f}%"
+        row += 1
+
+    if total > 0:
+        pie = PieChart()
+        pie.title = "Demandas por Prioridade"
+        data_ref = Reference(ws, min_col=2, min_row=start_pie_row + 1, max_row=start_pie_row + 3)
+        labels_ref = Reference(ws, min_col=1, min_row=start_pie_row + 1, max_row=start_pie_row + 3)
+        pie.add_data(data_ref, titles_from_data=False)
+        pie.set_categories(labels_ref)
+        pie.height = 8
+        pie.width = 10
+        ws.add_chart(pie, f"E{start_pie_row}")
+
     # Formatar larguras
     ws.column_dimensions['A'].width = 20
     ws.column_dimensions['B'].width = 14
@@ -905,6 +946,55 @@ def export_pdf():
     ]))
 
     story.append(table)
+    story.append(Spacer(1, 0.3 * inch))
+
+    # Pizza: demandas por prioridade (percentual)
+    story.append(Paragraph("DEMANDAS POR PRIORIDADE", kpi_title_style))
+
+    priority_summary = [
+        ["Críticas (Alta)", f"{kpis['criticas']}", f"{kpis['pct_criticas']:.1f}%"],
+        ["Média", f"{kpis['media']}", f"{kpis['pct_media']:.1f}%"],
+        ["Baixa", f"{kpis['baixa']}", f"{kpis['pct_baixa']:.1f}%"],
+    ]
+
+    priority_summary_table = Table(
+        [["Prioridade", "Quantidade", "Percentual"]] + priority_summary,
+        colWidths=[2.5 * inch, 1 * inch, 1 * inch],
+    )
+    priority_summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#0f172a')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e1')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+    ]))
+    story.append(priority_summary_table)
+
+    if kpis['total'] > 0:
+        drawing = Drawing(400, 200)
+        drawing.hAlign = 'CENTER'
+        pie = Pie()
+        pie.x = 110
+        pie.y = 10
+        pie.width = 180
+        pie.height = 180
+        pie.data = [kpis['criticas'], kpis['media'], kpis['baixa']]
+        pie.labels = ['Críticas', 'Média', 'Baixa']
+        
+        # Melhorando o visual (cor e bordas)
+        pie.slices.strokeWidth = 0.5
+        pie.slices[0].fillColor = colors.HexColor('#ef4444') # Vermelho para Críticas
+        pie.slices[1].fillColor = colors.HexColor('#f59e0b') # Laranja para Média
+        pie.slices[2].fillColor = colors.HexColor('#10b981') # Verde para Baixa
+        
+        drawing.add(pie)
+        story.append(Spacer(1, 0.15 * inch))
+        story.append(drawing)
+
     story.append(Spacer(1, 0.3 * inch))
 
     # Rodapé com filtro aplicado
