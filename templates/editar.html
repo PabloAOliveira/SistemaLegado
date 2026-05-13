@@ -12,7 +12,7 @@
     </div>
 
     <div class="form-field">
-        <label for="descricao">Descrição:
+        <label for="descricao">Descricao:
             <textarea id="descricao" name="descricao" rows="5" cols="50" required>{{ form_data.get('descricao', demanda[2]) }}</textarea>
         </label>
     </div>
@@ -30,23 +30,68 @@
     </div>
 
     <div class="form-field">
+        <label for="responsavel">Responsavel:
+        {% set selected_responsavel = form_data.get('responsavel', demanda[7] if demanda|length > 7 and demanda[7] else demanda[3]) %}
+            <select id="responsavel" name="responsavel" required>
+                <option value="">Selecione um responsavel</option>
+                {% for person in people %}
+                <option value="{{ person }}" {% if selected_responsavel == person %}selected{% endif %}>{{ person }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+
+    <div class="form-field">
         <label for="prioridade">Prioridade:
             {% set p = form_data.get('prioridade', demanda[4])|lower if form_data.get('prioridade', demanda[4]) else '' %}
             <select id="prioridade" name="prioridade" required>
                 <option value="alta" {% if p == "alta" %}selected{% endif %}>Alta</option>
-                <option value="media" {% if p == "media" or p == "mÃ©dia" %}selected{% endif %}>Media</option>
+                <option value="media" {% if p == "media" or p == "media" %}selected{% endif %}>Media</option>
                 <option value="baixa" {% if p == "baixa" %}selected{% endif %}>Baixa</option>
             </select>
         </label>
     </div>
 
     <div class="form-field">
-        <label for="data-criacao">Data de Criação:
+        <label for="status">Status:
+            {% set s = form_data.get('status', demanda[6]) %}
+            <select id="status" name="status" required>
+                <option value="Aberto" {% if s == "Aberto" %}selected{% endif %}>Aberto</option>
+                <option value="Em Andamento" {% if s == "Em Andamento" %}selected{% endif %}>Em Andamento</option>
+                <option value="Concluido" {% if s == "Concluido" %}selected{% endif %}>Concluído</option>
+                <option value="Cancelado" {% if s == "Cancelado" %}selected{% endif %}>Cancelado</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="form-field">
+        <label for="status">Status:
+            {% set selected_status = form_data.get('status', demanda[6] if demanda|length > 6 and demanda[6] else 'aberta') %}
+            <select id="status" name="status" required>
+                <option value="aberta" {% if selected_status == 'aberta' %}selected{% endif %}>Aberta</option>
+                <option value="concluida" {% if selected_status == 'concluida' %}selected{% endif %}>Concluida</option>
+                <option value="cancelada" {% if selected_status == 'cancelada' %}selected{% endif %}>Cancelada</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="form-field">
+        <label for="data-criacao">Data de Criacao:
             {% set data = demanda[5].split(' ') %}
             {% set date_parts = data[0].split('-') %}
             <input id="data-criacao" type="text" value="{{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}" disabled>
         </label>
     </div>
+
+    {% if demanda|length > 9 and demanda[9] %}
+    <div class="form-field">
+        <label for="data-conclusao">Data de Conclusao:
+            {% set data_conclusao = demanda[9].split(' ') %}
+            {% set conclusao_parts = data_conclusao[0].split('-') %}
+            <input id="data-conclusao" type="text" value="{{ conclusao_parts[2] }}/{{ conclusao_parts[1] }}/{{ conclusao_parts[0] }} {{ data_conclusao[1][:5] }}" disabled>
+        </label>
+    </div>
+    {% endif %}
 
     <div class="form-actions">
         <button type="submit">Atualizar</button>

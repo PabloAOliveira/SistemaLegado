@@ -7,16 +7,34 @@
 
 <div class="details-card glass-panel-soft">
     <h3>{{ demanda[1] }}</h3>
-    <p><strong>Descrição:</strong></p>
+    <p><strong>Descricao:</strong></p>
     <p>{{ demanda[2] }}</p>
 
     <p><strong>Solicitante:</strong> {{ demanda[3] }}</p>
+    <p><strong>Responsavel:</strong> {{ demanda[7] if demanda|length > 7 and demanda[7] else demanda[3] }}</p>
     <p><strong>Prioridade:</strong> {{ demanda[4] }}</p>
-    <p><strong>Data de Criação:</strong>
+    <p><strong>Status:</strong>
+        {% set status = demanda[6] if demanda|length > 6 and demanda[6] else 'aberta' %}
+        {{ 'Concluida' if status == 'concluida' else 'Cancelada' if status == 'cancelada' else 'Aberta' }}
+    </p>
+    {% if demanda|length > 8 and demanda[8] %}
+    <p><strong>Prazo:</strong>
+        {% set prazo_parts = demanda[8].split('-') %}
+        {{ prazo_parts[2] }}/{{ prazo_parts[1] }}/{{ prazo_parts[0] }}
+    </p>
+    {% endif %}
+    <p><strong>Data de Criacao:</strong>
         {% set data = demanda[5].split(' ') %}
         {% set date_parts = data[0].split('-') %}
         {{ date_parts[2] }}/{{ date_parts[1] }}/{{ date_parts[0] }} {{ data[1][:5] }}
     </p>
+    {% if demanda|length > 9 and demanda[9] %}
+    <p><strong>Data de Conclusao:</strong>
+        {% set data_conclusao = demanda[9].split(' ') %}
+        {% set conclusao_parts = data_conclusao[0].split('-') %}
+        {{ conclusao_parts[2] }}/{{ conclusao_parts[1] }}/{{ conclusao_parts[0] }} {{ data_conclusao[1][:5] }}
+    </p>
+    {% endif %}
 
     <div class="page-actions">
         <a href="/editar/{{ demanda[0] }}" class="button-link">Editar</a>
@@ -24,7 +42,7 @@
     </div>
 </div>
 
-<h3>Comentários</h3>
+<h3>Comentarios</h3>
 
 {% for comentario in comentarios %}
 <div class="comment-card glass-panel-soft">
@@ -37,7 +55,7 @@
 </div>
 {% endfor %}
 
-<h4>Adicionar Comentário</h4>
+<h4>Adicionar Comentario</h4>
 <form id="form-adicionar-comentario" method="POST" action="/adicionar_comentario/{{ demanda[0] }}" class="form-card glass-panel-soft">
     <div class="form-field">
         <label>Seu nome:<br>
@@ -55,7 +73,7 @@
         </label>
     </div>
     <div class="form-actions">
-        <button type="submit">Enviar Comentário</button>
+        <button type="submit">Enviar Comentario</button>
     </div>
 </form>
 
@@ -66,7 +84,7 @@ document.getElementById('form-adicionar-comentario').addEventListener('submit', 
 
     if (!comentario) {
         event.preventDefault();
-        alert('Escreva um comentário antes de enviar.');
+        alert('Escreva um comentario antes de enviar.');
         comentarioInput.focus();
     }
 });

@@ -79,7 +79,9 @@ def db_path(tmp_path: Path) -> Path:
         VALUES
           (1, 'Joao Silva', 'joao.silva@empresa.com', 'Analista', '2024-01-15 09:00:00'),
           (2, 'Maria Santos', 'maria.santos@empresa.com', 'Coordenadora', '2024-01-15 09:05:00'),
-          (3, 'Tech Team', 'tech.team@empresa.com', 'Equipe Tecnica', '2024-01-15 09:10:00')
+          (3, 'Tech Team', 'tech.team@empresa.com', 'Equipe Tecnica', '2024-01-15 09:10:00'),
+          (4, 'Equipe Suporte', 'suporte@empresa.com', 'Suporte', '2024-01-15 09:15:00'),
+          (5, 'Time Produto', 'produto@empresa.com', 'Produto', '2024-01-15 09:20:00')
         """
     )
 

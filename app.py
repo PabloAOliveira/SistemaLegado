@@ -1,8 +1,15 @@
 import os
+import io
+import json
+import base64
 import sqlite3
 import secrets
 import datetime
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 from contextlib import closing
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 from io import BytesIO
 from flask import Flask, flash, redirect, render_template, request, url_for, send_file
 from flask_migrate import Migrate
@@ -33,6 +40,7 @@ if not flask_secret_key:
 
 app.secret_key = flask_secret_key
 DATABASE_PATH = os.getenv('DATABASE_PATH', 'demandas.db')
+DEFAULT_DEADLINE_DAYS = 7
 
 database_path_abs = os.path.abspath(DATABASE_PATH)
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{database_path_abs}"
@@ -50,6 +58,134 @@ DEFAULT_REQUESTERS = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Plotly helpers
+# ---------------------------------------------------------------------------
+_PALETTE_PRIORITY = {
+    'alta':  '#e05252',
+    'media': '#e0a84d',
+    'baixa': '#52a8e0',
+    'sem prioridade': '#9e9e9e',
+}
+
+_PALETTE_STATUS = {
+    'Aberto':       '#52a8e0',
+    'Em Andamento': '#e0a84d',
+    'Concluido':    '#5ac87a',
+    'Cancelado':    '#e05252',
+}
+
+_PALETTE_BAR = [
+    '#4f8ef7', '#a78bfa', '#34d399', '#f97316',
+    '#fb7185', '#facc15', '#22d3ee', '#e879f9',
+]
+
+def _apply_dark_layout(fig, title):
+    BG, FG, GRID = '#1e2330', '#c9d1d9', '#2d3448'
+    fig.update_layout(
+        title={'text': title, 'font': {'color': FG, 'size': 14, 'family': 'sans-serif'}, 'x': 0.5, 'xanchor': 'center'},
+        paper_bgcolor=BG,
+        plot_bgcolor=BG,
+        font={'color': FG},
+        margin=dict(t=50, b=20, l=10, r=10),
+        xaxis=dict(showgrid=False, gridcolor=GRID, zeroline=False, automargin=True),
+        yaxis=dict(showgrid=True, gridcolor=GRID, zeroline=False, automargin=True),
+        autosize=True
+    )
+    return fig
+
+def gerar_graficos():
+    """Gera os 4 graficos usando Plotly e retorna JSON objects."""
+    resultado = {}
+
+    # 1. Chamados por Solicitante (barras horizontais)
+    dados_sol = fetch_all("""
+        SELECT solicitante, COUNT(*) as total
+        FROM demandas
+        WHERE solicitante IS NOT NULL AND solicitante != ''
+        GROUP BY solicitante
+        ORDER BY total ASC
+        LIMIT 10
+    """)
+    if dados_sol:
+        df = pd.DataFrame(dados_sol, columns=['Solicitante', 'Total'])
+        fig = px.bar(df, x='Total', y='Solicitante', orientation='h', text='Total',
+                     color='Solicitante', color_discrete_sequence=_PALETTE_BAR)
+        fig.update_layout(showlegend=False, xaxis_title="Número de Chamados", yaxis_title="")
+        fig.update_traces(textposition='outside')
+        fig = _apply_dark_layout(fig, 'Chamados por Solicitante')
+        resultado['por_solicitante'] = json.loads(fig.to_json())
+    else:
+        resultado['por_solicitante'] = None
+
+    # 2. Por Prioridade (pizza)
+    dados_prio = fetch_all("""
+        SELECT COALESCE(NULLIF(prioridade,''), 'sem prioridade') as prio,
+               COUNT(*) as total
+        FROM demandas
+        GROUP BY prio
+        ORDER BY total DESC
+    """)
+    if dados_prio:
+        df = pd.DataFrame(dados_prio, columns=['Prioridade', 'Total'])
+        cores = [ _PALETTE_PRIORITY.get(p.lower(), '#9e9e9e') for p in df['Prioridade'] ]
+        fig = px.pie(df, values='Total', names='Prioridade',
+                     color_discrete_sequence=cores, hole=0.3)
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        fig = _apply_dark_layout(fig, 'Chamados por Prioridade')
+        resultado['por_prioridade'] = json.loads(fig.to_json())
+    else:
+        resultado['por_prioridade'] = None
+
+    # 3. Por Status (barras verticais)
+    dados_status = fetch_all("""
+        SELECT COALESCE(NULLIF(status,''), 'Aberto') as st,
+               COUNT(*) as total
+        FROM demandas
+        GROUP BY st
+        ORDER BY total DESC
+    """)
+    if dados_status:
+        df = pd.DataFrame(dados_status, columns=['Status', 'Total'])
+        cores = [ _PALETTE_STATUS.get(s, '#9e9e9e') for s in df['Status'] ]
+        fig = px.bar(df, x='Status', y='Total', text='Total',
+                     color='Status', color_discrete_sequence=cores)
+        fig.update_layout(showlegend=False, xaxis_title="", yaxis_title="Número de Chamados")
+        fig.update_traces(textposition='outside')
+        fig = _apply_dark_layout(fig, 'Chamados por Status')
+        fig.update_layout(xaxis=dict(showgrid=False))
+        resultado['por_status'] = json.loads(fig.to_json())
+    else:
+        resultado['por_status'] = None
+
+    # 4. Evolucao Temporal (linha por mes)
+    dados_temp = fetch_all("""
+        SELECT substr(data_criacao, 1, 7) as mes, COUNT(*) as total
+        FROM demandas
+        WHERE data_criacao IS NOT NULL AND data_criacao != ''
+        GROUP BY mes
+        ORDER BY mes ASC
+        LIMIT 24
+    """)
+    if dados_temp:
+        df = pd.DataFrame(dados_temp, columns=['Mês', 'Total'])
+        fig = px.line(df, x='Mês', y='Total', markers=True, text='Total')
+        fig.update_traces(line=dict(color='#4f8ef7', width=3),
+                          marker=dict(size=8, color='#a78bfa'),
+                          textposition="top center")
+        fig.update_layout(xaxis_title="", yaxis_title="Número de Chamados")
+        fig = _apply_dark_layout(fig, 'Evolução Temporal de Chamados')
+        resultado['evolucao_temporal'] = json.loads(fig.to_json())
+    else:
+        resultado['evolucao_temporal'] = None
+
+    return resultado
+
+
+
+# ---------------------------------------------------------------------------
+# DB helpers
+# ---------------------------------------------------------------------------
 def get_db():
     return closing(sqlite3.connect(DATABASE_PATH))
 
@@ -80,6 +216,159 @@ def log_db_error(operation, error, **context):
 
 def date_now():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def calculate_deadline(created_at):
+    created_date = parse_datetime(created_at) or datetime.datetime.now()
+    return (created_date + datetime.timedelta(days=DEFAULT_DEADLINE_DAYS)).strftime("%Y-%m-%d")
+
+
+def parse_datetime(value):
+    if not value:
+        return None
+    for date_format in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.datetime.strptime(value, date_format)
+        except ValueError:
+            continue
+    return None
+
+
+def ensure_demandas_dashboard_columns():
+    columns = {row[1] for row in fetch_all("PRAGMA table_info(demandas)")}
+    required_columns = {
+        "status": "TEXT NOT NULL DEFAULT 'aberta'",
+        "responsavel": "TEXT",
+        "prazo": "TEXT",
+        "data_conclusao": "TEXT",
+    }
+
+    for column_name, column_definition in required_columns.items():
+        if column_name not in columns:
+            execute_query(f"ALTER TABLE demandas ADD COLUMN {column_name} {column_definition}")
+
+    execute_query(
+        """
+        UPDATE demandas
+        SET responsavel = solicitante
+        WHERE responsavel IS NULL OR TRIM(responsavel) = ''
+        """
+    )
+    execute_query(
+        f"""
+        UPDATE demandas
+        SET prazo = COALESCE(
+            date(data_criacao, '+{DEFAULT_DEADLINE_DAYS} days'),
+            date('now', '+{DEFAULT_DEADLINE_DAYS} days')
+        )
+        """
+    )
+    execute_query(
+        """
+        UPDATE demandas
+        SET prioridade = 'baixa'
+        WHERE prioridade IS NULL
+           OR TRIM(prioridade) = ''
+           OR LOWER(TRIM(prioridade)) NOT IN ('alta', 'media', 'média', 'baixa')
+        """
+    )
+
+
+def normalize_status(value):
+    status = (value or "aberta").strip().lower()
+    if status in ("concluida", "concluída"):
+        return "concluida"
+    if status == "cancelada":
+        return "cancelada"
+    return "aberta"
+
+
+def normalize_priority(value):
+    priority = (value or "").strip().lower()
+    if priority == "alta":
+        return "alta"
+    if priority in ("media", "média"):
+        return "media"
+    return "baixa"
+
+
+def status_label(status):
+    labels = {
+        "aberta": "Aberta",
+        "concluida": "Concluida",
+        "cancelada": "Cancelada",
+    }
+    return labels.get(normalize_status(status), "Aberta")
+
+
+def calculate_dashboard_metrics(demandas):
+    total = len(demandas)
+    today = datetime.datetime.now().date()
+
+    counts = {
+        "abertas": 0,
+        "concluidas": 0,
+        "atrasadas": 0,
+    }
+    critical_demands = []
+    open_by_responsible = {}
+    completed_resolution_days = []
+
+    for demanda in demandas:
+        status = normalize_status(demanda[6] if len(demanda) > 6 else None)
+        responsavel = (demanda[7] if len(demanda) > 7 else None) or demanda[3] or "Sem responsavel"
+        prazo = demanda[8] if len(demanda) > 8 else None
+        data_conclusao = demanda[9] if len(demanda) > 9 else None
+
+        is_finalized = status in ("concluida", "cancelada")
+        is_late = False
+        prazo_date = parse_datetime(prazo)
+        if prazo_date and not is_finalized and prazo_date.date() < today:
+            is_late = True
+
+        if status == "concluida":
+            counts["concluidas"] += 1
+            started_at = parse_datetime(demanda[5])
+            finished_at = parse_datetime(data_conclusao)
+            if started_at and finished_at and finished_at >= started_at:
+                completed_resolution_days.append((finished_at - started_at).total_seconds() / 86400)
+        elif status == "aberta":
+            counts["abertas"] += 1
+            open_by_responsible[responsavel] = open_by_responsible.get(responsavel, 0) + 1
+
+        if is_late:
+            counts["atrasadas"] += 1
+
+        if (demanda[4] or "").strip().lower() == "alta" and not is_finalized:
+            critical_demands.append(
+                {
+                    "id": demanda[0],
+                    "titulo": demanda[1],
+                    "responsavel": responsavel,
+                    "status": status_label(status),
+                }
+            )
+
+    def percent(value):
+        if total == 0:
+            return 0
+        return round((value / total) * 100)
+
+    average_resolution_days = None
+    if completed_resolution_days:
+        average_resolution_days = round(sum(completed_resolution_days) / len(completed_resolution_days), 1)
+
+    return {
+        "total": total,
+        "status_cards": [
+            {"label": "Abertas", "count": counts["abertas"], "percent": percent(counts["abertas"])},
+            {"label": "Concluidas", "count": counts["concluidas"], "percent": percent(counts["concluidas"])},
+            {"label": "Atrasadas", "count": counts["atrasadas"], "percent": percent(counts["atrasadas"])},
+        ],
+        "critical_demands": critical_demands,
+        "open_by_responsible": sorted(open_by_responsible.items(), key=lambda item: (-item[1], item[0].lower())),
+        "average_resolution_days": average_resolution_days,
+    }
 
 
 def ensure_requesters_table_seeded():
@@ -155,8 +444,11 @@ def is_valid_person(name):
 
 @app.route('/', methods=['GET'])
 def index():
+    ensure_demandas_dashboard_columns()
     prioridade_filtro = request.args.get('prioridade', 'todas').strip().lower()
-    
+    if prioridade_filtro not in ("todas", ""):
+        prioridade_filtro = normalize_priority(prioridade_filtro)
+
     if prioridade_filtro == 'todas' or not prioridade_filtro:
         demandas = fetch_all("""
                              SELECT *
@@ -180,18 +472,31 @@ def index():
     
     return render_template('index.html', demandas=demandas, prioridade_filtro=prioridade_filtro)
 
+
+@app.route('/dashboard', methods=['GET'])
+def dashboard():
+    ensure_demandas_dashboard_columns()
+    dashboard_metrics = calculate_dashboard_metrics(fetch_all("SELECT * FROM demandas"))
+    return render_template('dashboard.html', dashboard=dashboard_metrics)
+
 @app.route('/nova_demanda', methods=['GET', 'POST'])
 def nova_demanda():
+    ensure_demandas_dashboard_columns()
     people = get_available_people()
 
     if request.method == 'POST':
         titulo = request.form['titulo']
         descricao = request.form['descricao']
         solicitante = request.form['solicitante'].strip()
-        prioridade = request.form['prioridade']
+        responsavel = request.form.get('responsavel', '').strip()
+        prioridade = normalize_priority(request.form.get('prioridade'))
+        status = normalize_status(request.form.get('status'))
+        data_criacao = str(date_now())
+        prazo = calculate_deadline(data_criacao)
+        data_conclusao = date_now() if status == "concluida" else None
 
-        if not is_valid_person(solicitante):
-            flash('Selecione um solicitante valido!', 'error')
+        if not is_valid_person(solicitante) or not is_valid_person(responsavel):
+            flash('Selecione solicitante e responsavel validos!', 'error')
             return render_template(
                 'nova_demanda.html',
                 people=people,
@@ -200,8 +505,12 @@ def nova_demanda():
 
         try:
             execute_query(
-                "INSERT INTO demandas (titulo, descricao, solicitante, prioridade, data_criacao) VALUES (?, ?, ?, ?, ?)",
-                (titulo, descricao, solicitante, prioridade, str(date_now())),
+                """
+                INSERT INTO demandas
+                    (titulo, descricao, solicitante, prioridade, data_criacao, status, responsavel, prazo, data_conclusao)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (titulo, descricao, solicitante, prioridade, data_criacao, status, responsavel, prazo, data_conclusao),
             )
         except sqlite3.Error as error:
             log_db_error("nova_demanda", error, solicitante=solicitante)
@@ -216,16 +525,27 @@ def nova_demanda():
 
 @app.route('/editar/<int:demanda_id>', methods=['GET', 'POST'])
 def editar(demanda_id):
+    ensure_demandas_dashboard_columns()
     people = get_available_people()
 
     if request.method == 'POST':
         titulo = request.form['titulo']
         descricao = request.form['descricao']
-        prioridade = request.form['prioridade']
+        prioridade = normalize_priority(request.form.get('prioridade'))
         solicitante = request.form['solicitante'].strip()
+        responsavel = request.form.get('responsavel', '').strip()
+        status = normalize_status(request.form.get('status'))
+        current_demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
+        prazo = calculate_deadline(current_demanda[5] if current_demanda else None)
+        current_data_conclusao = current_demanda[9] if current_demanda and len(current_demanda) > 9 else None
+        data_conclusao = current_data_conclusao
+        if status == "concluida" and not data_conclusao:
+            data_conclusao = date_now()
+        elif status != "concluida":
+            data_conclusao = None
 
-        if not is_valid_person(solicitante):
-            flash('Selecione um solicitante valido!', 'error')
+        if not is_valid_person(solicitante) or not is_valid_person(responsavel):
+            flash('Selecione solicitante e responsavel validos!', 'error')
             demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
             return render_template(
                 'editar.html',
@@ -236,8 +556,13 @@ def editar(demanda_id):
 
         try:
             execute_query(
-                "UPDATE demandas SET titulo = ?, descricao = ?, prioridade = ?, solicitante = ? WHERE id = ?",
-                (titulo, descricao, prioridade, solicitante, demanda_id),
+                """
+                UPDATE demandas
+                SET titulo = ?, descricao = ?, prioridade = ?, solicitante = ?,
+                    responsavel = ?, status = ?, prazo = ?, data_conclusao = ?
+                WHERE id = ?
+                """,
+                (titulo, descricao, prioridade, solicitante, responsavel, status, prazo, data_conclusao, demanda_id),
             )
         except sqlite3.Error as error:
             log_db_error("editar", error, demanda_id=demanda_id, solicitante=solicitante)
@@ -266,6 +591,7 @@ def deletar(demanda_id):
 
 @app.route('/buscar', methods=['GET'])
 def buscar():
+    ensure_demandas_dashboard_columns()
     termo = request.args.get('q', '').strip()
     like_term = f"%{termo}%"
 
@@ -276,11 +602,12 @@ def buscar():
            OR solicitante LIKE ?''',
         (like_term, like_term, like_term),
     )
-    return render_template('index.html', demandas=resultados)
+    return render_template('index.html', demandas=resultados, prioridade_filtro='todas')
 
 
 @app.route('/detalhes/<int:demanda_id>', methods=['GET'])
 def detalhes(demanda_id):
+    ensure_demandas_dashboard_columns()
     demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
     comentarios = fetch_all('SELECT * FROM comentarios WHERE demanda_id = ?', (demanda_id,))
 
@@ -296,23 +623,16 @@ def detalhes(demanda_id):
 @app.route('/solicitante', methods=['GET'])
 def solicitante():
     requesters = get_requesters()
-    
-    # Count de chamados por solicitante
-    dados = fetch_all("""
-        SELECT solicitante, COUNT(*) as total
-        FROM demandas
-        GROUP BY solicitante
-        ORDER BY total DESC
-    """)
-    
-    # Formata para o gráfico
-    categorias = [row[0] for row in dados]
-    totais = [row[1] for row in dados]
-    
-    return render_template('solicitante.html', 
-                         requesters=requesters,
-                         categorias=categorias,
-                         totais=totais)
+    graficos = gerar_graficos()
+    return render_template('solicitante.html',
+                           requesters=requesters,
+                           graficos=graficos)
+
+
+@app.route('/solicitante/graficos', methods=['GET'])
+def solicitante_graficos_api():
+    """API para atualizacao dinamica dos graficos via fetch()."""
+    return jsonify(gerar_graficos())
 
 
 @app.route('/sutita', methods=['GET'])
@@ -488,7 +808,7 @@ def build_export_header(prioridade_filtro):
     company = get_company_name()
     data_geracao = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     filtro = format_priority_filter_label(prioridade_filtro)
-    
+
     return {
         'company': company,
         'data_geracao': data_geracao,
@@ -851,7 +1171,7 @@ def export_pdf():
 
     # KPI 1: Total de Demandas (destaque)
     story.append(Paragraph("📊 TOTAL DE DEMANDAS", kpi_title_style))
-    story.append(Paragraph(f"<b style='font-size: 28'>{kpis['total']}</b>", 
+    story.append(Paragraph(f"<b style='font-size: 28'>{kpis['total']}</b>",
                           ParagraphStyle('TotalKPI', parent=styles['Normal'], alignment=1, spaceAfter=12)))
     story.append(Spacer(1, 0.1 * inch))
 
@@ -889,7 +1209,7 @@ def export_pdf():
     # KPI 3: Demandas Críticas (Atenção)
     if kpis['criticas'] > 0:
         story.append(Paragraph("⚠️ DEMANDAS CRÍTICAS", ParagraphStyle(
-            'CriticalTitle', parent=styles['Heading2'], fontSize=12, 
+            'CriticalTitle', parent=styles['Heading2'], fontSize=12,
             textColor=colors.HexColor('#dc2626'), spaceAfter=8, spaceBefore=6
         )))
 
@@ -984,13 +1304,13 @@ def export_pdf():
         pie.height = 180
         pie.data = [kpis['criticas'], kpis['media'], kpis['baixa']]
         pie.labels = ['Críticas', 'Média', 'Baixa']
-        
+
         # Melhorando o visual (cor e bordas)
         pie.slices.strokeWidth = 0.5
         pie.slices[0].fillColor = colors.HexColor('#ef4444') # Vermelho para Críticas
         pie.slices[1].fillColor = colors.HexColor('#f59e0b') # Laranja para Média
         pie.slices[2].fillColor = colors.HexColor('#10b981') # Verde para Baixa
-        
+
         drawing.add(pie)
         story.append(Spacer(1, 0.15 * inch))
         story.append(drawing)
