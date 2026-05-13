@@ -41,6 +41,18 @@
     </div>
 
     <div class="form-field">
+        <label for="status">Status:
+            {% set s = form_data.get('status', demanda[6]) %}
+            <select id="status" name="status" required>
+                <option value="Aberto" {% if s == "Aberto" %}selected{% endif %}>Aberto</option>
+                <option value="Em Andamento" {% if s == "Em Andamento" %}selected{% endif %}>Em Andamento</option>
+                <option value="Concluido" {% if s == "Concluido" %}selected{% endif %}>Concluído</option>
+                <option value="Cancelado" {% if s == "Cancelado" %}selected{% endif %}>Cancelado</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="form-field">
         <label for="data-criacao">Data de Criação:
             {% set data = demanda[5].split(' ') %}
             {% set date_parts = data[0].split('-') %}

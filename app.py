@@ -1,9 +1,15 @@
 import os
+import io
+import json
+import base64
 import sqlite3
 import secrets
 import datetime
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 from contextlib import closing
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from models import db
@@ -40,6 +46,134 @@ DEFAULT_REQUESTERS = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Plotly helpers
+# ---------------------------------------------------------------------------
+_PALETTE_PRIORITY = {
+    'alta':  '#e05252',
+    'media': '#e0a84d',
+    'baixa': '#52a8e0',
+    'sem prioridade': '#9e9e9e',
+}
+
+_PALETTE_STATUS = {
+    'Aberto':       '#52a8e0',
+    'Em Andamento': '#e0a84d',
+    'Concluido':    '#5ac87a',
+    'Cancelado':    '#e05252',
+}
+
+_PALETTE_BAR = [
+    '#4f8ef7', '#a78bfa', '#34d399', '#f97316',
+    '#fb7185', '#facc15', '#22d3ee', '#e879f9',
+]
+
+def _apply_dark_layout(fig, title):
+    BG, FG, GRID = '#1e2330', '#c9d1d9', '#2d3448'
+    fig.update_layout(
+        title={'text': title, 'font': {'color': FG, 'size': 14, 'family': 'sans-serif'}, 'x': 0.5, 'xanchor': 'center'},
+        paper_bgcolor=BG,
+        plot_bgcolor=BG,
+        font={'color': FG},
+        margin=dict(t=50, b=20, l=10, r=10),
+        xaxis=dict(showgrid=False, gridcolor=GRID, zeroline=False, automargin=True),
+        yaxis=dict(showgrid=True, gridcolor=GRID, zeroline=False, automargin=True),
+        autosize=True
+    )
+    return fig
+
+def gerar_graficos():
+    """Gera os 4 graficos usando Plotly e retorna JSON objects."""
+    resultado = {}
+
+    # 1. Chamados por Solicitante (barras horizontais)
+    dados_sol = fetch_all("""
+        SELECT solicitante, COUNT(*) as total
+        FROM demandas
+        WHERE solicitante IS NOT NULL AND solicitante != ''
+        GROUP BY solicitante
+        ORDER BY total ASC
+        LIMIT 10
+    """)
+    if dados_sol:
+        df = pd.DataFrame(dados_sol, columns=['Solicitante', 'Total'])
+        fig = px.bar(df, x='Total', y='Solicitante', orientation='h', text='Total',
+                     color='Solicitante', color_discrete_sequence=_PALETTE_BAR)
+        fig.update_layout(showlegend=False, xaxis_title="Número de Chamados", yaxis_title="")
+        fig.update_traces(textposition='outside')
+        fig = _apply_dark_layout(fig, 'Chamados por Solicitante')
+        resultado['por_solicitante'] = json.loads(fig.to_json())
+    else:
+        resultado['por_solicitante'] = None
+
+    # 2. Por Prioridade (pizza)
+    dados_prio = fetch_all("""
+        SELECT COALESCE(NULLIF(prioridade,''), 'sem prioridade') as prio,
+               COUNT(*) as total
+        FROM demandas
+        GROUP BY prio
+        ORDER BY total DESC
+    """)
+    if dados_prio:
+        df = pd.DataFrame(dados_prio, columns=['Prioridade', 'Total'])
+        cores = [ _PALETTE_PRIORITY.get(p.lower(), '#9e9e9e') for p in df['Prioridade'] ]
+        fig = px.pie(df, values='Total', names='Prioridade',
+                     color_discrete_sequence=cores, hole=0.3)
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        fig = _apply_dark_layout(fig, 'Chamados por Prioridade')
+        resultado['por_prioridade'] = json.loads(fig.to_json())
+    else:
+        resultado['por_prioridade'] = None
+
+    # 3. Por Status (barras verticais)
+    dados_status = fetch_all("""
+        SELECT COALESCE(NULLIF(status,''), 'Aberto') as st,
+               COUNT(*) as total
+        FROM demandas
+        GROUP BY st
+        ORDER BY total DESC
+    """)
+    if dados_status:
+        df = pd.DataFrame(dados_status, columns=['Status', 'Total'])
+        cores = [ _PALETTE_STATUS.get(s, '#9e9e9e') for s in df['Status'] ]
+        fig = px.bar(df, x='Status', y='Total', text='Total',
+                     color='Status', color_discrete_sequence=cores)
+        fig.update_layout(showlegend=False, xaxis_title="", yaxis_title="Número de Chamados")
+        fig.update_traces(textposition='outside')
+        fig = _apply_dark_layout(fig, 'Chamados por Status')
+        fig.update_layout(xaxis=dict(showgrid=False))
+        resultado['por_status'] = json.loads(fig.to_json())
+    else:
+        resultado['por_status'] = None
+
+    # 4. Evolucao Temporal (linha por mes)
+    dados_temp = fetch_all("""
+        SELECT substr(data_criacao, 1, 7) as mes, COUNT(*) as total
+        FROM demandas
+        WHERE data_criacao IS NOT NULL AND data_criacao != ''
+        GROUP BY mes
+        ORDER BY mes ASC
+        LIMIT 24
+    """)
+    if dados_temp:
+        df = pd.DataFrame(dados_temp, columns=['Mês', 'Total'])
+        fig = px.line(df, x='Mês', y='Total', markers=True, text='Total')
+        fig.update_traces(line=dict(color='#4f8ef7', width=3), 
+                          marker=dict(size=8, color='#a78bfa'),
+                          textposition="top center")
+        fig.update_layout(xaxis_title="", yaxis_title="Número de Chamados")
+        fig = _apply_dark_layout(fig, 'Evolução Temporal de Chamados')
+        resultado['evolucao_temporal'] = json.loads(fig.to_json())
+    else:
+        resultado['evolucao_temporal'] = None
+
+    return resultado
+
+
+
+# ---------------------------------------------------------------------------
+# DB helpers
+# ---------------------------------------------------------------------------
 def get_db():
     return closing(sqlite3.connect(DATABASE_PATH))
 
@@ -286,23 +420,16 @@ def detalhes(demanda_id):
 @app.route('/solicitante', methods=['GET'])
 def solicitante():
     requesters = get_requesters()
-    
-    # Count de chamados por solicitante
-    dados = fetch_all("""
-        SELECT solicitante, COUNT(*) as total
-        FROM demandas
-        GROUP BY solicitante
-        ORDER BY total DESC
-    """)
-    
-    # Formata para o gráfico
-    categorias = [row[0] for row in dados]
-    totais = [row[1] for row in dados]
-    
-    return render_template('solicitante.html', 
-                         requesters=requesters,
-                         categorias=categorias,
-                         totais=totais)
+    graficos = gerar_graficos()
+    return render_template('solicitante.html',
+                           requesters=requesters,
+                           graficos=graficos)
+
+
+@app.route('/solicitante/graficos', methods=['GET'])
+def solicitante_graficos_api():
+    """API para atualizacao dinamica dos graficos via fetch()."""
+    return jsonify(gerar_graficos())
 
 
 @app.route('/sutita', methods=['GET'])

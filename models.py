@@ -13,6 +13,7 @@ class Demanda(db.Model):
     descricao = db.Column(db.Text)
     solicitante = db.Column(db.Text)
     prioridade = db.Column(db.Text, server_default='')
+    status = db.Column(db.Text, server_default='Aberto')
     data_criacao = db.Column(db.Text)
 
 
@@ -36,4 +37,3 @@ class Requester(db.Model):
     email = db.Column(db.Text, nullable=False, unique=True)
     cargo = db.Column(db.Text, nullable=False)
     data_criacao = db.Column(db.Text, nullable=False)
-

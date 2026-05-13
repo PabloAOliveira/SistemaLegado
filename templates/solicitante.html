@@ -5,6 +5,9 @@
     <div class="toolbar-inner">
         <h2 style="margin: 0;">Solicitantes</h2>
         <div class="page-actions">
+            <button id="btn-refresh-graficos" class="button-link" type="button" aria-label="Atualizar gráficos">
+                <span id="refresh-icon">&#x21BB;</span> Atualizar
+            </button>
             <a href="{{ url_for('cadastrar_solicitante') }}" class="button-link">Cadastrar</a>
             <a href="{{ url_for('index') }}" class="button-link button-link-muted">Voltar</a>
         </div>
@@ -12,17 +15,35 @@
 </div>
 
 <div class="solicitante-main-scroll">
-    <div class="glass-panel-soft solicitante-chart">
-        <div id="container" class="solicitante-chart-canvas"></div>
 
-        <script id="data" type="application/json">
-        {
-            "categories": {{ categorias | tojson }},
-            "data": {{ totais | tojson }}
-        }
-        </script>
+    <!-- Grade de gráficos matplotlib -->
+    <div class="glass-panel-soft solicitante-charts-section">
+        <div class="charts-vertical-stack">
+
+            <div class="chart-card glass-panel-soft">
+                <p class="chart-label">Por Solicitante</p>
+                <div id="div-por-solicitante" class="chart-container"></div>
+            </div>
+
+            <div class="chart-card glass-panel-soft">
+                <p class="chart-label">Por Prioridade</p>
+                <div id="div-por-prioridade" class="chart-container"></div>
+            </div>
+
+            <div class="chart-card glass-panel-soft">
+                <p class="chart-label">Por Status</p>
+                <div id="div-por-status" class="chart-container"></div>
+            </div>
+
+            <div class="chart-card glass-panel-soft">
+                <p class="chart-label">Evolução Temporal</p>
+                <div id="div-evolucao-temporal" class="chart-container"></div>
+            </div>
+
+        </div>
     </div>
 
+    <!-- Tabela de solicitantes -->
     <div class="glass-panel-soft solicitante-table">
         {% if requesters %}
         <table class="table-demandas">
@@ -66,35 +87,68 @@
     </div>
 </div>
 
-<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const data = JSON.parse(document.getElementById('data').textContent);
-    Highcharts.chart('container', {
-        chart: {
-            type: 'column'
-        },
-        title: {
-            text: 'Número de Chamados por Solicitante'
-        },
-        xAxis: {
-            categories: data.categories,
-            labels: {
-                rotation: -45
+(function () {
+    var btn = document.getElementById('btn-refresh-graficos');
+    var icon = document.getElementById('refresh-icon');
+
+    var CHART_IDS = {
+        por_solicitante:  'div-por-solicitante',
+        por_prioridade:   'div-por-prioridade',
+        por_status:       'div-por-status',
+        evolucao_temporal: 'div-evolucao-temporal',
+    };
+
+    var initialGraficos = {{ graficos | tojson | safe }};
+
+    function drawCharts(data) {
+        Object.keys(CHART_IDS).forEach(function(key) {
+            var divId = CHART_IDS[key];
+            var container = document.getElementById(divId);
+            if (container && data[key]) {
+                var chartData = data[key];
+                Plotly.newPlot(divId, chartData.data, chartData.layout, {responsive: true, displayModeBar: false});
             }
-        },
-        yAxis: {
-            min: 0,
-            title: {
-                text: 'Número de Chamados'
-            }
-        },
-        series: [{
-            name: 'Chamados',
-            data: data.data
-        }]
+        });
+        // Força o Plotly a recalcular as dimensões corretamente após o render
+        setTimeout(function() {
+            window.dispatchEvent(new Event('resize'));
+        }, 200);
+    }
+
+    // Desenha na carga inicial
+    drawCharts(initialGraficos);
+
+    function setLoading(loading) {
+        btn.disabled = loading;
+        icon.style.transition = 'transform 0.6s linear';
+        if (loading) {
+            icon.style.animation = 'spin 1s linear infinite';
+        } else {
+            icon.style.animation = '';
+        }
+    }
+
+    btn.addEventListener('click', function () {
+        setLoading(true);
+
+        fetch('/solicitante/graficos')
+            .then(function (res) {
+                if (!res.ok) { throw new Error('HTTP ' + res.status); }
+                return res.json();
+            })
+            .then(function (data) {
+                drawCharts(data);
+            })
+            .catch(function (err) {
+                console.error('Erro ao atualizar gráficos:', err);
+            })
+            .finally(function () {
+                setLoading(false);
+            });
     });
-});
+})();
 
 function deletarSolicitante(id) {
     fetch('/solicitante/deletar/' + id, { method: 'DELETE' })
@@ -109,4 +163,57 @@ function deletarSolicitante(id) {
         });
 }
 </script>
+
+<style>
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+#refresh-icon {
+    display: inline-block;
+}
+
+.solicitante-charts-section {
+    padding: 20px;
+    margin-bottom: 0;
+}
+
+.charts-vertical-stack {
+    display: block !important;
+    width: 100% !important;
+    max-width: 1100px !important;
+    margin: 0 auto !important;
+}
+
+.chart-card {
+    display: block !important;
+    width: 100% !important;
+    padding: 20px !important;
+    margin-bottom: 60px !important;
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+    background: var(--surface-soft);
+    border: 1px solid var(--surface-border);
+    backdrop-filter: blur(14px);
+}
+
+.chart-label {
+    margin: 0 0 15px 0 !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    opacity: 0.8 !important;
+    display: block !important;
+}
+
+.chart-container {
+    width: 100% !important;
+    height: 320px !important;
+    display: block !important;
+    position: relative !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+}
+</style>
 {% endblock %}

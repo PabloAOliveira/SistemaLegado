@@ -38,6 +38,18 @@
         </label>
     </div>
 
+    <div class="form-field">
+        <label>Status:<br>
+            {% set selected_status = form_data.get('status', 'Aberto') %}
+            <select name="status" required>
+                <option value="Aberto" {% if selected_status == 'Aberto' %}selected{% endif %}>Aberto</option>
+                <option value="Em Andamento" {% if selected_status == 'Em Andamento' %}selected{% endif %}>Em Andamento</option>
+                <option value="Concluido" {% if selected_status == 'Concluido' %}selected{% endif %}>Concluído</option>
+                <option value="Cancelado" {% if selected_status == 'Cancelado' %}selected{% endif %}>Cancelado</option>
+            </select>
+        </label>
+    </div>
+
     <div class="form-actions">
         <button type="submit">Salvar</button>
         <a href="/" class="button-link button-link-muted">Cancelar</a>
