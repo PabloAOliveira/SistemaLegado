@@ -23,6 +23,16 @@
                 {% if not request.path.startswith('/solicitante') %}
                     <a href="{{ url_for('solicitante') }}">Solicitante</a>
                 {% endif %}
+                <form action="{{ url_for('definir_usuario') }}" method="POST" class="search-form">
+                    <label>
+                        <select name="usuario" onchange="this.form.submit()" aria-label="Quem e voce">
+                            <option value="">Quem e voce?</option>
+                            {% for person in people %}
+                            <option value="{{ person }}" {% if usuario_atual == person %}selected{% endif %}>{{ person }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </form>
                 <form action="/buscar" method="GET" class="search-form">
                     <label>
                         <input type="text" name="q" placeholder="Buscar">

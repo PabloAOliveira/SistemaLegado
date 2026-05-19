@@ -3,7 +3,7 @@ import sqlite3
 import secrets
 import datetime
 from contextlib import closing
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, redirect, render_template, request, session, url_for
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from models import db
@@ -34,10 +34,13 @@ migrate = Migrate(app, db)
 DEFAULT_REQUESTERS = (
     {"nome": "Joao Silva", "email": "joao.silva@empresa.com", "cargo": "Analista"},
     {"nome": "Maria Santos", "email": "maria.santos@empresa.com", "cargo": "Coordenadora"},
-    {"nome": "Tech Team", "email": "tech.team@empresa.com", "cargo": "Equipe Tecnica"},
-    {"nome": "Equipe Suporte", "email": "suporte@empresa.com", "cargo": "Suporte"},
-    {"nome": "Time Produto", "email": "produto@empresa.com", "cargo": "Produto"},
 )
+
+EXCLUDED_REQUESTER_NAMES = frozenset({
+    "Tech Team",
+    "Equipe Suporte",
+    "Time Produto",
+})
 
 
 def get_db():
@@ -72,6 +75,11 @@ def date_now():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def remove_excluded_requesters():
+    for name in EXCLUDED_REQUESTER_NAMES:
+        execute_query("DELETE FROM requesters WHERE nome = ?", (name,))
+
+
 def ensure_requesters_table_seeded():
     execute_query(
         """
@@ -84,6 +92,8 @@ def ensure_requesters_table_seeded():
         )
         """
     )
+
+    remove_excluded_requesters()
 
     row = fetch_one("SELECT COUNT(1) FROM requesters")
     count = row[0] if row else 0
@@ -109,7 +119,11 @@ def get_requesters():
         ORDER BY nome COLLATE NOCASE ASC
         """
     )
-    return [{"id": row[0], "nome": row[1], "email": row[2], "cargo": row[3]} for row in rows]
+    return [
+        {"id": row[0], "nome": row[1], "email": row[2], "cargo": row[3]}
+        for row in rows
+        if row[1] not in EXCLUDED_REQUESTER_NAMES
+    ]
 
 
 def get_requester_by_id(requester_id):
@@ -133,7 +147,7 @@ def get_available_people():
 
     for requester in get_requesters():
         name = str(requester.get("nome", "")).strip()
-        if name and name not in normalized_people:
+        if name and name not in EXCLUDED_REQUESTER_NAMES and name not in normalized_people:
             normalized_people.append(name)
 
     return normalized_people
@@ -141,6 +155,41 @@ def get_available_people():
 
 def is_valid_person(name):
     return name in get_available_people()
+
+
+def get_usuario_logado():
+    usuario = str(session.get('usuario_atual', '')).strip()
+    if usuario in EXCLUDED_REQUESTER_NAMES:
+        session.pop('usuario_atual', None)
+        return ''
+    return usuario
+
+
+def is_demanda_responsavel(demanda, usuario):
+    solicitante = str(demanda[3] or '').strip()
+    return bool(usuario) and usuario == solicitante
+
+
+@app.context_processor
+def inject_usuario_atual():
+    return {
+        'usuario_atual': get_usuario_logado(),
+        'people': get_available_people(),
+    }
+
+
+@app.route('/definir-usuario', methods=['POST'])
+def definir_usuario():
+    usuario = request.form.get('usuario', '').strip()
+    if usuario:
+        if not is_valid_person(usuario):
+            flash('Selecione um usuario valido!', 'error')
+        else:
+            session['usuario_atual'] = usuario
+    else:
+        session.pop('usuario_atual', None)
+
+    return redirect(request.referrer or url_for('index'))
 
 
 @app.route('/', methods=['GET'])
@@ -243,6 +292,20 @@ def editar(demanda_id):
 
 @app.route('/deletar/<int:demanda_id>', methods=['DELETE'])
 def deletar(demanda_id):
+    demanda = fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
+    if not demanda:
+        flash('Demanda nao encontrada!', 'error')
+        return redirect(url_for('index'))
+
+    usuario = get_usuario_logado()
+    if not usuario:
+        flash('Selecione quem voce e no menu antes de deletar uma demanda!', 'error')
+        return redirect(url_for('index'))
+
+    if not is_demanda_responsavel(demanda, usuario):
+        flash('Apenas o responsavel da demanda pode deleta-la!', 'error')
+        return redirect(url_for('index'))
+
     try:
         execute_query('DELETE FROM demandas WHERE id = ?', (demanda_id,))
     except sqlite3.Error as error:

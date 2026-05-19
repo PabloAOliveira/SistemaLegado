@@ -20,9 +20,6 @@ depends_on = None
 DEFAULT_REQUESTERS = (
     {"nome": "Joao Silva", "email": "joao.silva@empresa.com", "cargo": "Analista"},
     {"nome": "Maria Santos", "email": "maria.santos@empresa.com", "cargo": "Coordenadora"},
-    {"nome": "Tech Team", "email": "tech.team@empresa.com", "cargo": "Equipe Tecnica"},
-    {"nome": "Equipe Suporte", "email": "suporte@empresa.com", "cargo": "Suporte"},
-    {"nome": "Time Produto", "email": "produto@empresa.com", "cargo": "Produto"},
 )
 
 

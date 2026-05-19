@@ -69,7 +69,9 @@
                     <div class="row-actions">
                         <a href="/detalhes/{{ demanda[0] }}" class="action-view" data-label="Ver" aria-label="Ver demanda {{ demanda[0] }}"></a>
                         <a href="/editar/{{ demanda[0] }}" class="action-edit" data-label="Editar" aria-label="Editar demanda {{ demanda[0] }}"></a>
+                        {% if usuario_atual and usuario_atual == demanda[3] %}
                         <a href="#" class="action-delete" data-label="Deletar" aria-label="Deletar demanda {{ demanda[0] }}" onclick="deletarDemanda({{ demanda[0] }}); return false;"></a>
+                        {% endif %}
                     </div>
                 </td>
             </tr>

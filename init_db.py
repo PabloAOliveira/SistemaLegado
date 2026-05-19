@@ -11,7 +11,7 @@ SEED_DEMANDAS = [
 ]
 
 SEED_COMENTARIOS = [
-    (1, 1, 'Vou investigar esse bug', 'Tech Team', '2024-01-15 11:00:00'),
+    (1, 1, 'Vou investigar esse bug', 'Joao Silva', '2024-01-15 11:00:00'),
     (2, 1, 'Bug corrigido na branch develop', 'Desenvolvedor', '2024-01-15 16:30:00'),
     (3, 99, 'Este comentario esta orfao', 'Usuario', '2024-01-16 10:00:00'),
 ]
@@ -19,9 +19,6 @@ SEED_COMENTARIOS = [
 SEED_REQUESTERS = [
     ('Joao Silva', 'joao.silva@empresa.com', 'Analista', '2024-01-15 09:00:00'),
     ('Maria Santos', 'maria.santos@empresa.com', 'Coordenadora', '2024-01-15 09:05:00'),
-    ('Tech Team', 'tech.team@empresa.com', 'Equipe Tecnica', '2024-01-15 09:10:00'),
-    ('Equipe Suporte', 'suporte@empresa.com', 'Suporte', '2024-01-15 09:15:00'),
-    ('Time Produto', 'produto@empresa.com', 'Produto', '2024-01-15 09:20:00'),
 ]
 
 def run_migrations_and_seed() -> None:

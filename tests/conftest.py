@@ -70,7 +70,7 @@ def db_path(tmp_path: Path) -> Path:
     cursor.execute(
         """
         INSERT INTO comentarios (id, demanda_id, comentario, autor, data)
-        VALUES (1, 1, 'Vou investigar esse bug', 'Tech Team', '2024-01-15 11:00:00')
+        VALUES (1, 1, 'Vou investigar esse bug', 'Joao Silva', '2024-01-15 11:00:00')
         """
     )
     cursor.execute(
@@ -78,8 +78,7 @@ def db_path(tmp_path: Path) -> Path:
         INSERT INTO requesters (id, nome, email, cargo, data_criacao)
         VALUES
           (1, 'Joao Silva', 'joao.silva@empresa.com', 'Analista', '2024-01-15 09:00:00'),
-          (2, 'Maria Santos', 'maria.santos@empresa.com', 'Coordenadora', '2024-01-15 09:05:00'),
-          (3, 'Tech Team', 'tech.team@empresa.com', 'Equipe Tecnica', '2024-01-15 09:10:00')
+          (2, 'Maria Santos', 'maria.santos@empresa.com', 'Coordenadora', '2024-01-15 09:05:00')
         """
     )
 

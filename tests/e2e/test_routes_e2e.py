@@ -86,7 +86,7 @@ def test_nova_demanda_post_cria_registro_e_redireciona(client, db_path: Path):
         data={
             "titulo": "Nova feature",
             "descricao": "Implementar upload de arquivos",
-            "solicitante": "Time Produto",
+            "solicitante": "Maria Santos",
             "prioridade": "baixa",
         },
         follow_redirects=False,
@@ -102,7 +102,7 @@ def test_nova_demanda_post_cria_registro_e_redireciona(client, db_path: Path):
             ("Nova feature",),
         ).fetchone()
 
-    assert created == ("Nova feature", "Implementar upload de arquivos", "Time Produto", "baixa")
+    assert created == ("Nova feature", "Implementar upload de arquivos", "Maria Santos", "baixa")
 
 
 def test_editar_get_exibe_demanda(client):
@@ -120,7 +120,7 @@ def test_editar_post_atualiza_demanda_e_redireciona(client, db_path: Path):
         data={
             "titulo": "Login corrigido",
             "descricao": "Ajuste final do login",
-            "solicitante": "Equipe Suporte",
+            "solicitante": "Maria Santos",
             "prioridade": "media",
         },
         follow_redirects=False,
@@ -135,10 +135,13 @@ def test_editar_post_atualiza_demanda_e_redireciona(client, db_path: Path):
             "SELECT titulo, descricao, solicitante, prioridade FROM demandas WHERE id = 1"
         ).fetchone()
 
-    assert updated == ("Login corrigido", "Ajuste final do login", "Equipe Suporte", "media")
+    assert updated == ("Login corrigido", "Ajuste final do login", "Maria Santos", "media")
 
 
-def test_deletar_remove_demanda_e_redireciona(client, db_path: Path):
+def test_deletar_remove_demanda_quando_usuario_e_responsavel(client, db_path: Path):
+    with client.session_transaction() as sess:
+        sess['usuario_atual'] = 'Maria Santos'
+
     response = client.delete("/deletar/2", follow_redirects=False)
 
     assert response.status_code == 302
@@ -149,6 +152,33 @@ def test_deletar_remove_demanda_e_redireciona(client, db_path: Path):
         deleted = cursor.execute("SELECT id FROM demandas WHERE id = 2").fetchone()
 
     assert deleted is None
+
+
+def test_deletar_negado_quando_usuario_nao_e_responsavel(client, db_path: Path):
+    with client.session_transaction() as sess:
+        sess['usuario_atual'] = 'Joao Silva'
+
+    response = client.delete("/deletar/2", follow_redirects=False)
+
+    assert response.status_code == 302
+
+    with get_db(db_path) as conn:
+        cursor = conn.cursor()
+        still_exists = cursor.execute("SELECT id FROM demandas WHERE id = 2").fetchone()
+
+    assert still_exists is not None
+
+
+def test_deletar_negado_sem_usuario_logado(client, db_path: Path):
+    response = client.delete("/deletar/2", follow_redirects=False)
+
+    assert response.status_code == 302
+
+    with get_db(db_path) as conn:
+        cursor = conn.cursor()
+        still_exists = cursor.execute("SELECT id FROM demandas WHERE id = 2").fetchone()
+
+    assert still_exists is not None
 
 
 def test_buscar_filtra_por_titulo(client):
@@ -189,7 +219,7 @@ def test_detalhes_exibe_demanda_e_comentarios(client):
 def test_adicionar_comentario_cria_registro_e_redireciona(client, db_path: Path):
     response = client.post(
         "/adicionar_comentario/1",
-        data={"autor": "Tech Team", "comentario": "Fluxo validado em e2e"},
+        data={"autor": "Joao Silva", "comentario": "Fluxo validado em e2e"},
         follow_redirects=False,
     )
 
@@ -199,17 +229,17 @@ def test_adicionar_comentario_cria_registro_e_redireciona(client, db_path: Path)
     with get_db(db_path) as conn:
         cursor = conn.cursor()
         comment = cursor.execute(
-            "SELECT autor, comentario FROM comentarios WHERE demanda_id = 1 AND autor = ?",
-            ("Tech Team",),
+            "SELECT autor, comentario FROM comentarios WHERE demanda_id = 1 AND comentario = ?",
+            ("Fluxo validado em e2e",),
         ).fetchone()
 
-    assert comment == ("Tech Team", "Fluxo validado em e2e")
+    assert comment == ("Joao Silva", "Fluxo validado em e2e")
 
 
 def test_adicionar_comentario_vazio_retorna_erro_e_nao_grava(client, db_path: Path):
     response = client.post(
         "/adicionar_comentario/1",
-        data={"autor": "Tech Team", "comentario": "   "},
+        data={"autor": "Joao Silva", "comentario": "   "},
         follow_redirects=False,
     )
 
