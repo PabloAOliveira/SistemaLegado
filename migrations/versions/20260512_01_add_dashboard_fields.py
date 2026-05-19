@@ -1,7 +1,7 @@
 """add dashboard fields to demands
 
 Revision ID: 20260512_01
-Revises: 20260422_01
+Revises: a1558870ac3a
 Create Date: 2026-05-12 00:00:00
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 revision = '20260512_01'
-down_revision = '20260422_01'
+down_revision = 'a1558870ac3a'
 branch_labels = None
 depends_on = None
 

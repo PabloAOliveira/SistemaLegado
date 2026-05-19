@@ -96,6 +96,7 @@ def _apply_dark_layout(fig, title):
 
 def gerar_graficos():
     """Gera os 4 graficos usando Plotly e retorna JSON objects."""
+    ensure_demandas_dashboard_columns()
     resultado = {}
 
     # 1. Chamados por Solicitante (barras horizontais)

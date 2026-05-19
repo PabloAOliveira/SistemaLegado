@@ -11,7 +11,7 @@
     <p>{{ demanda[2] }}</p>
 
     <p><strong>Solicitante:</strong> {{ demanda[3] }}</p>
-    <p><strong>Responsavel:</strong> {{ demanda[7] if demanda|length > 7 and demanda[7] else demanda[3] }}</p>
+    <p><strong>Responsável:</strong> {{ demanda[7] if demanda|length > 7 and demanda[7] else demanda[3] }}</p>
     <p><strong>Prioridade:</strong> {{ demanda[4] }}</p>
     <p><strong>Status:</strong>
         {% set status = demanda[6] if demanda|length > 6 and demanda[6] else 'aberta' %}
