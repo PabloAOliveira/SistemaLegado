@@ -29,6 +29,7 @@ Pop-Location
 ```powershell
 python -c "from API_EXTERNA.api import create_api_app; app = create_api_app(); app.run(host='0.0.0.0', port=5001)"
 ```
+Documentação [http://127.0.0.1:5001/api/v1/docs](http://127.0.0.1:5001/api/v1/docs)
 
 3. Testar endpoints (exemplo com token de teste inserido pela migration):
 

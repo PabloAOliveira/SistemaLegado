@@ -8,18 +8,82 @@ from db import fetch_all
 import config
 import hashlib
 import hmac
+import math
+import time
+from collections import deque
+from threading import Lock
+from werkzeug.serving import make_server, BaseWSGIServer
 
+
+# Disable Werkzeug server header globally for this process.
+BaseWSGIServer.server_version = ''
+BaseWSGIServer.sys_version = ''
+
+class QuietWSGIServer(BaseWSGIServer):
+    server_version = ''
+    sys_version = ''
 
 DEFAULT_NO_AUTH_MESSAGE = 'Missing authentication token'
 DEFAULT_NO_PERMISSION_MESSAGE = 'Invalid token or insufficient permissions'
 
 SCHEMA_ERROR = '#/components/schemas/Error'
+RATE_LIMIT_RPS = 10
+RATE_LIMIT_RPM = 600
+
+_rate_limit_lock = Lock()
+_rate_limit_state = {}
+
+
+def get_rate_limit_key(req):
+    token = get_token_from_request(req)
+    if token:
+        return f"token:{token}"
+    return f"ip:{req.remote_addr or 'unknown'}"
+
+
+def rate_limit_response(retry_after_seconds):
+    response = make_response(jsonify({'detail': 'Rate limit exceeded'}), 429)
+    response.headers['Retry-After'] = str(int(retry_after_seconds))
+    return response
+
+
+def check_rate_limit(req):
+    key = get_rate_limit_key(req)
+    now = time.time()
+    with _rate_limit_lock:
+        state = _rate_limit_state.get(key)
+        if state is None:
+            state = {
+                'per_second': deque(),
+                'per_minute': deque(),
+            }
+            _rate_limit_state[key] = state
+
+        per_second = state['per_second']
+        per_minute = state['per_minute']
+
+        while per_second and now - per_second[0] >= 1:
+            per_second.popleft()
+        while per_minute and now - per_minute[0] >= 60:
+            per_minute.popleft()
+
+        if len(per_second) >= RATE_LIMIT_RPS:
+            retry_after = max(0.0, 1 - (now - per_second[0]))
+            return rate_limit_response(retry_after)
+        if len(per_minute) >= RATE_LIMIT_RPM:
+            retry_after = max(0.0, 60 - (now - per_minute[0]))
+            return rate_limit_response(retry_after)
+
+        per_second.append(now)
+        per_minute.append(now)
+    return None
 
 
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Headers'] = 'Authorization, X-API-Token, Content-Type'
     response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers.pop('Server', None)
     return response
 
 
@@ -88,6 +152,30 @@ def serialize_solicitante(row):
     }
 
 
+def get_pagination_params(req, default_per_page=20):
+    page_raw = req.args.get('page', '1')
+    per_page_raw = req.args.get('per_page', str(default_per_page))
+    try:
+        page = int(page_raw)
+        per_page = int(per_page_raw)
+    except ValueError:
+        return None, None, make_response(jsonify({'detail': 'Invalid pagination parameters'}), 400)
+    if page < 1 or per_page not in (20, 50, 100):
+        return None, None, make_response(jsonify({'detail': 'Invalid pagination parameters'}), 400)
+    return page, per_page, None
+
+
+def build_paginated_response(items, page, per_page, total):
+    total_pages = max(1, math.ceil(total / per_page)) if total else 1
+    return {
+        'items': items,
+        'page': page,
+        'per_page': per_page,
+        'total': total,
+        'total_pages': total_pages
+    }
+
+
 def build_openapi_spec(server_url, no_auth_message, no_permission_message):
     return {
         'openapi': '3.0.3',
@@ -95,11 +183,13 @@ def build_openapi_spec(server_url, no_auth_message, no_permission_message):
             'title': 'SGDI External Read API',
             'version': '1.0.0',
             'description': (
-                'API externa apenas leitura para demandas e solicitantes (sem email). '
+                'API externa apenas leitura para demandas e solicitantes. '
                 'Requer token previamente cadastrado na tabela system_users com user_type="externo". '
-                'Os tokens são armazenados como hash com salt; envie o token apenas via header.'
+                'Os tokens são envie o token apenas via header. '
+                'Limite de requisições por usuário: 600 por minuto.'
+
             ),
-            'contact': {'name': 'Team SGDI'}
+            'contact': {'name': 'SUTITA'}
         },
         'servers': [
             {'url': server_url, 'description': 'External API server'},
@@ -118,31 +208,50 @@ def build_openapi_spec(server_url, no_auth_message, no_permission_message):
                         {'bearerAuth': []},
                         {'apiTokenHeader': []}
                     ],
+                    'parameters': [
+                        {
+                            'name': 'page',
+                            'in': 'query',
+                            'required': False,
+                            'schema': {'type': 'integer', 'minimum': 1, 'default': 1},
+                            'description': 'Página atual (inicia em 1).'
+                        },
+                        {
+                            'name': 'per_page',
+                            'in': 'query',
+                            'required': False,
+                            'schema': {'type': 'integer', 'enum': [20, 50, 100], 'default': 20},
+                            'description': 'Quantidade de itens por página.'
+                        }
+                    ],
                     'responses': {
                         '200': {
-                            'description': 'Lista de demandas',
+                            'description': 'Lista de demandas (paginada)',
                             'content': {
                                 'application/json': {
-                                    'schema': {
-                                        'type': 'array',
-                                        'items': {'$ref': '#/components/schemas/Demanda'}
-                                    },
+                                    'schema': {'$ref': '#/components/schemas/PaginatedDemandas'},
                                     'examples': {
                                         'exemplo': {
-                                            'value': [
-                                                {
-                                                    'id': 1,
-                                                    'titulo': 'Corrigir bug no login',
-                                                    'descricao': 'Usuários não conseguem fazer login',
-                                                    'solicitante': 'Joao Silva',
-                                                    'prioridade': 'alta',
-                                                    'data_criacao': '2024-01-15 10:30:00',
-                                                    'status': 'aberta',
-                                                    'responsavel': 'Tech Team',
-                                                    'prazo': '2024-01-22',
-                                                    'data_conclusao': None
-                                                }
-                                            ]
+                                            'value': {
+                                                'items': [
+                                                    {
+                                                        'id': 1,
+                                                        'titulo': 'Corrigir bug no login',
+                                                        'descricao': 'Usuários não conseguem fazer login',
+                                                        'solicitante': 'Joao Silva',
+                                                        'prioridade': 'alta',
+                                                        'data_criacao': '2024-01-15 10:30:00',
+                                                        'status': 'aberta',
+                                                        'responsavel': 'Tech Team',
+                                                        'prazo': '2024-01-22',
+                                                        'data_conclusao': None
+                                                    }
+                                                ],
+                                                'page': 1,
+                                                'per_page': 20,
+                                                'total': 1,
+                                                'total_pages': 1
+                                            }
                                         }
                                     }
                                 }
@@ -154,6 +263,16 @@ def build_openapi_spec(server_url, no_auth_message, no_permission_message):
                         },
                         '403': {
                             'description': no_permission_message,
+                            'content': {'application/json': {'schema': {'$ref': SCHEMA_ERROR}}}
+                        },
+                        '429': {
+                            'description': 'Rate limit exceeded',
+                            'headers': {
+                                'Retry-After': {
+                                    'schema': {'type': 'integer'},
+                                    'description': 'Segundos até a próxima requisição permitida.'
+                                }
+                            },
                             'content': {'application/json': {'schema': {'$ref': SCHEMA_ERROR}}}
                         },
                     }
@@ -168,25 +287,44 @@ def build_openapi_spec(server_url, no_auth_message, no_permission_message):
                         {'bearerAuth': []},
                         {'apiTokenHeader': []}
                     ],
+                    'parameters': [
+                        {
+                            'name': 'page',
+                            'in': 'query',
+                            'required': False,
+                            'schema': {'type': 'integer', 'minimum': 1, 'default': 1},
+                            'description': 'Página atual (inicia em 1).'
+                        },
+                        {
+                            'name': 'per_page',
+                            'in': 'query',
+                            'required': False,
+                            'schema': {'type': 'integer', 'enum': [20, 50, 100], 'default': 20},
+                            'description': 'Quantidade de itens por página.'
+                        }
+                    ],
                     'responses': {
                         '200': {
-                            'description': 'Lista de solicitantes',
+                            'description': 'Lista de solicitantes (paginada)',
                             'content': {
                                 'application/json': {
-                                    'schema': {
-                                        'type': 'array',
-                                        'items': {'$ref': '#/components/schemas/Solicitante'}
-                                    },
+                                    'schema': {'$ref': '#/components/schemas/PaginatedSolicitantes'},
                                     'examples': {
                                         'exemplo': {
-                                            'value': [
-                                                {
-                                                    'id': 1,
-                                                    'nome': 'Joao Silva',
-                                                    'cargo': 'Analista',
-                                                    'data_criacao': '2024-01-15 09:00:00'
-                                                }
-                                            ]
+                                            'value': {
+                                                'items': [
+                                                    {
+                                                        'id': 1,
+                                                        'nome': 'Joao Silva',
+                                                        'cargo': 'Analista',
+                                                        'data_criacao': '2024-01-15 09:00:00'
+                                                    }
+                                                ],
+                                                'page': 1,
+                                                'per_page': 20,
+                                                'total': 1,
+                                                'total_pages': 1
+                                            }
                                         }
                                     }
                                 }
@@ -198,6 +336,16 @@ def build_openapi_spec(server_url, no_auth_message, no_permission_message):
                         },
                         '403': {
                             'description': no_permission_message,
+                            'content': {'application/json': {'schema': {'$ref': SCHEMA_ERROR}}}
+                        },
+                        '429': {
+                            'description': 'Rate limit exceeded',
+                            'headers': {
+                                'Retry-After': {
+                                    'schema': {'type': 'integer'},
+                                    'description': 'Segundos até a próxima requisição permitida.'
+                                }
+                            },
                             'content': {'application/json': {'schema': {'$ref': SCHEMA_ERROR}}}
                         },
                     }
@@ -261,6 +409,32 @@ def build_openapi_spec(server_url, no_auth_message, no_permission_message):
                     'properties': {
                         'detail': {'type': 'string', 'example': 'Missing authentication token'}
                     }
+                },
+                'PaginatedDemandas': {
+                    'type': 'object',
+                    'properties': {
+                        'items': {
+                            'type': 'array',
+                            'items': {'$ref': '#/components/schemas/Demanda'}
+                        },
+                        'page': {'type': 'integer', 'example': 1},
+                        'per_page': {'type': 'integer', 'example': 20},
+                        'total': {'type': 'integer', 'example': 120},
+                        'total_pages': {'type': 'integer', 'example': 6}
+                    }
+                },
+                'PaginatedSolicitantes': {
+                    'type': 'object',
+                    'properties': {
+                        'items': {
+                            'type': 'array',
+                            'items': {'$ref': '#/components/schemas/Solicitante'}
+                        },
+                        'page': {'type': 'integer', 'example': 1},
+                        'per_page': {'type': 'integer', 'example': 20},
+                        'total': {'type': 'integer', 'example': 120},
+                        'total_pages': {'type': 'integer', 'example': 6}
+                    }
                 }
             }
         }
@@ -305,20 +479,45 @@ def create_api_app():
 
     app_api.after_request(add_cors_headers)
 
+    @app_api.before_request
+    def enforce_rate_limit():
+        limited = check_rate_limit(request)
+        if limited is not None:
+            return limited
+        return None
+
     @app_api.route('/api/v1/demandas', methods=['GET'])
     @token_required(no_authentication_message, no_permission_message)
     def api_demandas():
+        page, per_page, error = get_pagination_params(request)
+        if error:
+            return error
+        offset = (page - 1) * per_page
+        total = fetch_all('SELECT COUNT(1) FROM demandas')[0][0]
         rows = fetch_all(
             'SELECT id, titulo, descricao, solicitante, prioridade, data_criacao, '
-            'status, responsavel, prazo, data_conclusao FROM demandas'
+            'status, responsavel, prazo, data_conclusao FROM demandas '
+            'ORDER BY id DESC LIMIT ? OFFSET ?',
+            (per_page, offset)
         )
-        return jsonify([serialize_demanda(row) for row in rows])
+        items = [serialize_demanda(row) for row in rows]
+        return jsonify(build_paginated_response(items, page, per_page, total))
 
     @app_api.route('/api/v1/solicitantes', methods=['GET'])
     @token_required(no_authentication_message, no_permission_message)
     def api_solicitantes():
-        rows = fetch_all('SELECT id, nome, cargo, data_criacao FROM requesters')
-        return jsonify([serialize_solicitante(row) for row in rows])
+        page, per_page, error = get_pagination_params(request)
+        if error:
+            return error
+        offset = (page - 1) * per_page
+        total = fetch_all('SELECT COUNT(1) FROM requesters')[0][0]
+        rows = fetch_all(
+            'SELECT id, nome, cargo, data_criacao FROM requesters '
+            'ORDER BY id DESC LIMIT ? OFFSET ?',
+            (per_page, offset)
+        )
+        items = [serialize_solicitante(row) for row in rows]
+        return jsonify(build_paginated_response(items, page, per_page, total))
 
     @app_api.route('/api/v1/openapi.json', methods=['GET'])
     def openapi_spec():
@@ -337,6 +536,11 @@ def create_api_app():
     return app_api
 
 
+def run_api_server(app):
+    server = make_server(config.FLASK_HOST, int(config.FLASK_PORT) + 1, app, QuietWSGIServer)
+    server.serve_forever()
+
+
 if __name__ == '__main__':
     app = create_api_app()
-    app.run(host=config.FLASK_HOST, port=int(config.FLASK_PORT) + 1, debug=False)
+    run_api_server(app)
