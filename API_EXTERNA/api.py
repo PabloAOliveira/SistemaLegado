@@ -165,6 +165,79 @@ def get_pagination_params(req, default_per_page=20):
     return page, per_page, None
 
 
+def _build_where_clause(conditions):
+    """Helper to join conditions into a WHERE clause and return tuple(params).
+
+    `conditions` is a list of tuples (expr, value) where expr is a SQL fragment
+    like "titulo LIKE ?" and value is the parameter value.
+    """
+    if not conditions:
+        return '', ()
+    exprs = [c[0] for c in conditions]
+    params = [c[1] for c in conditions]
+    return 'WHERE ' + ' AND '.join(exprs), tuple(params)
+
+
+def build_demandas_where_clause(req):
+    conditions = []
+
+    # Exact id filter
+    id_raw = req.args.get('id')
+    if id_raw:
+        try:
+            _id = int(id_raw)
+            conditions.append(('id = ?', _id))
+        except ValueError:
+            pass
+
+    # Text fields — use LIKE for partial matches
+    for field in ('titulo', 'descricao', 'solicitante', 'prioridade', 'status', 'responsavel'):
+        v = req.args.get(field)
+        if v:
+            conditions.append((f"{field} LIKE ?", f"%{v}%"))
+
+    # Date ranges
+    if req.args.get('data_criacao_from'):
+        conditions.append(("data_criacao >= ?", req.args.get('data_criacao_from')))
+    if req.args.get('data_criacao_to'):
+        conditions.append(("data_criacao <= ?", req.args.get('data_criacao_to')))
+    if req.args.get('data_conclusao_from'):
+        conditions.append(("data_conclusao >= ?", req.args.get('data_conclusao_from')))
+    if req.args.get('data_conclusao_to'):
+        conditions.append(("data_conclusao <= ?", req.args.get('data_conclusao_to')))
+    if req.args.get('prazo_from'):
+        conditions.append(("prazo >= ?", req.args.get('prazo_from')))
+    if req.args.get('prazo_to'):
+        conditions.append(("prazo <= ?", req.args.get('prazo_to')))
+
+    return _build_where_clause(conditions)
+
+
+def build_requesters_where_clause(req):
+    conditions = []
+    id_raw = req.args.get('id')
+    if id_raw:
+        try:
+            _id = int(id_raw)
+            conditions.append(('id = ?', _id))
+        except ValueError:
+            pass
+
+    # nome and cargo partial matches
+    if req.args.get('nome'):
+        conditions.append(("nome LIKE ?", f"%{req.args.get('nome')}%"))
+    if req.args.get('cargo'):
+        conditions.append(("cargo LIKE ?", f"%{req.args.get('cargo')}%"))
+
+    # date ranges for data_criacao
+    if req.args.get('data_criacao_from'):
+        conditions.append(("data_criacao >= ?", req.args.get('data_criacao_from')))
+    if req.args.get('data_criacao_to'):
+        conditions.append(("data_criacao <= ?", req.args.get('data_criacao_to')))
+
+    return _build_where_clause(conditions)
+
+
 def build_paginated_response(items, page, per_page, total):
     total_pages = max(1, math.ceil(total / per_page)) if total else 1
     return {
@@ -209,20 +282,21 @@ def build_openapi_spec(server_url, no_auth_message, no_permission_message):
                         {'apiTokenHeader': []}
                     ],
                     'parameters': [
-                        {
-                            'name': 'page',
-                            'in': 'query',
-                            'required': False,
-                            'schema': {'type': 'integer', 'minimum': 1, 'default': 1},
-                            'description': 'Página atual (inicia em 1).'
-                        },
-                        {
-                            'name': 'per_page',
-                            'in': 'query',
-                            'required': False,
-                            'schema': {'type': 'integer', 'enum': [20, 50, 100], 'default': 20},
-                            'description': 'Quantidade de itens por página.'
-                        }
+                        {'name': 'page', 'in': 'query', 'required': False, 'schema': {'type': 'integer', 'minimum': 1, 'default': 1}, 'description': 'Página atual (inicia em 1).'},
+                        {'name': 'per_page', 'in': 'query', 'required': False, 'schema': {'type': 'integer', 'enum': [20, 50, 100], 'default': 20}, 'description': 'Quantidade de itens por página.'},
+                        {'name': 'id', 'in': 'query', 'required': False, 'schema': {'type': 'integer'}, 'description': 'Filtrar por id exato'},
+                        {'name': 'titulo', 'in': 'query', 'required': False, 'schema': {'type': 'string'}, 'description': 'Busca parcial no título'},
+                        {'name': 'descricao', 'in': 'query', 'required': False, 'schema': {'type': 'string'}, 'description': 'Busca parcial na descrição'},
+                        {'name': 'solicitante', 'in': 'query', 'required': False, 'schema': {'type': 'string'}, 'description': 'Busca parcial pelo nome do solicitante'},
+                        {'name': 'prioridade', 'in': 'query', 'required': False, 'schema': {'type': 'string'}, 'description': 'Filtrar por prioridade (baixa, media, alta, critica)'},
+                        {'name': 'status', 'in': 'query', 'required': False, 'schema': {'type': 'string'}, 'description': 'Filtrar por status (aberta, concluida, cancelada, etc.)'},
+                        {'name': 'responsavel', 'in': 'query', 'required': False, 'schema': {'type': 'string'}, 'description': 'Busca parcial pelo responsável'},
+                        {'name': 'data_criacao_from', 'in': 'query', 'required': False, 'schema': {'type': 'string', 'format': 'date-time'}, 'description': 'Data de criação mínima (inclusive) - formato YYYY-MM-DD ou YYYY-MM-DD HH:MM:SS'},
+                        {'name': 'data_criacao_to', 'in': 'query', 'required': False, 'schema': {'type': 'string', 'format': 'date-time'}, 'description': 'Data de criação máxima (inclusive)'},
+                        {'name': 'data_conclusao_from', 'in': 'query', 'required': False, 'schema': {'type': 'string', 'format': 'date-time'}, 'description': 'Data de conclusão mínima (inclusive)'},
+                        {'name': 'data_conclusao_to', 'in': 'query', 'required': False, 'schema': {'type': 'string', 'format': 'date-time'}, 'description': 'Data de conclusão máxima (inclusive)'},
+                        {'name': 'prazo_from', 'in': 'query', 'required': False, 'schema': {'type': 'string', 'format': 'date'}, 'description': 'Prazo mínimo (inclusive)'},
+                        {'name': 'prazo_to', 'in': 'query', 'required': False, 'schema': {'type': 'string', 'format': 'date'}, 'description': 'Prazo máximo (inclusive)'}
                     ],
                     'responses': {
                         '200': {
@@ -288,20 +362,13 @@ def build_openapi_spec(server_url, no_auth_message, no_permission_message):
                         {'apiTokenHeader': []}
                     ],
                     'parameters': [
-                        {
-                            'name': 'page',
-                            'in': 'query',
-                            'required': False,
-                            'schema': {'type': 'integer', 'minimum': 1, 'default': 1},
-                            'description': 'Página atual (inicia em 1).'
-                        },
-                        {
-                            'name': 'per_page',
-                            'in': 'query',
-                            'required': False,
-                            'schema': {'type': 'integer', 'enum': [20, 50, 100], 'default': 20},
-                            'description': 'Quantidade de itens por página.'
-                        }
+                        {'name': 'page', 'in': 'query', 'required': False, 'schema': {'type': 'integer', 'minimum': 1, 'default': 1}, 'description': 'Página atual (inicia em 1).'},
+                        {'name': 'per_page', 'in': 'query', 'required': False, 'schema': {'type': 'integer', 'enum': [20, 50, 100], 'default': 20}, 'description': 'Quantidade de itens por página.'},
+                        {'name': 'id', 'in': 'query', 'required': False, 'schema': {'type': 'integer'}, 'description': 'Filtrar por id exato'},
+                        {'name': 'nome', 'in': 'query', 'required': False, 'schema': {'type': 'string'}, 'description': 'Busca parcial por nome'},
+                        {'name': 'cargo', 'in': 'query', 'required': False, 'schema': {'type': 'string'}, 'description': 'Busca parcial por cargo'},
+                        {'name': 'data_criacao_from', 'in': 'query', 'required': False, 'schema': {'type': 'string', 'format': 'date-time'}, 'description': 'Data de criação mínima (inclusive)'},
+                        {'name': 'data_criacao_to', 'in': 'query', 'required': False, 'schema': {'type': 'string', 'format': 'date-time'}, 'description': 'Data de criação máxima (inclusive)'}
                     ],
                     'responses': {
                         '200': {
@@ -493,13 +560,17 @@ def create_api_app():
         if error:
             return error
         offset = (page - 1) * per_page
-        total = fetch_all('SELECT COUNT(1) FROM demandas')[0][0]
-        rows = fetch_all(
+        where_clause, where_params = build_demandas_where_clause(request)
+        total_q = 'SELECT COUNT(1) FROM demandas ' + where_clause
+        total = fetch_all(total_q, where_params)[0][0]
+
+        rows_q = (
             'SELECT id, titulo, descricao, solicitante, prioridade, data_criacao, '
             'status, responsavel, prazo, data_conclusao FROM demandas '
-            'ORDER BY id DESC LIMIT ? OFFSET ?',
-            (per_page, offset)
+            + where_clause + ' ORDER BY id DESC LIMIT ? OFFSET ?'
         )
+        params = list(where_params) + [per_page, offset]
+        rows = fetch_all(rows_q, tuple(params))
         items = [serialize_demanda(row) for row in rows]
         return jsonify(build_paginated_response(items, page, per_page, total))
 
@@ -510,12 +581,16 @@ def create_api_app():
         if error:
             return error
         offset = (page - 1) * per_page
-        total = fetch_all('SELECT COUNT(1) FROM requesters')[0][0]
-        rows = fetch_all(
+        where_clause, where_params = build_requesters_where_clause(request)
+        total_q = 'SELECT COUNT(1) FROM requesters ' + where_clause
+        total = fetch_all(total_q, where_params)[0][0]
+
+        rows_q = (
             'SELECT id, nome, cargo, data_criacao FROM requesters '
-            'ORDER BY id DESC LIMIT ? OFFSET ?',
-            (per_page, offset)
+            + where_clause + ' ORDER BY id DESC LIMIT ? OFFSET ?'
         )
+        params = list(where_params) + [per_page, offset]
+        rows = fetch_all(rows_q, tuple(params))
         items = [serialize_solicitante(row) for row in rows]
         return jsonify(build_paginated_response(items, page, per_page, total))
 
