@@ -8,6 +8,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import app as app_module
+import db as db_module
 
 
 @pytest.fixture
@@ -99,11 +100,15 @@ def client(db_path: Path, monkeypatch: pytest.MonkeyPatch):
     def connect_override(_database, *args, **kwargs):
         return original_connect(str(db_path), *args, **kwargs)
 
-    monkeypatch.setattr(app_module.sqlite3, "connect", connect_override)
-    app_module.app.config.update(
+    monkeypatch.setattr(db_module.sqlite3, "connect", connect_override)
+
+    app = app_module.create_app()
+    app.config.update(
         TESTING=True,
         SECRET_KEY="test-secret-key",
     )
 
-    with app_module.app.test_client() as test_client:
+    with app.test_client() as test_client:
         yield test_client
+
+
