@@ -13,6 +13,7 @@ from services.graphics import gerar_graficos
 from services.dashboard import calculate_dashboard_metrics
 from services.export import export_to_excel, export_to_pdf
 from services.utils import normalize_priority, normalize_status
+from db import fetch_one
 
 
 def register_routes(app):
@@ -176,11 +177,13 @@ def register_routes(app):
         if not requester:
             return ('', 404)
 
-        try:
-            delete_requester(requester_id)
-            return ('', 204)
-        except Exception:
+        if count_demandas_for_requester(requester["nome"]) > 0:
+            return ('', 409)
+
+        if not delete_requester(requester_id):
             return ('', 500)
+
+        return ('', 204)
 
     @app.route('/solicitante/cadastrar', methods=['GET', 'POST'])
     def cadastrar_solicitante():
@@ -256,3 +259,10 @@ def register_routes(app):
         relatorio_tipo = request.form.get('relatorio_tipo', 'completo').strip().lower()
         return export_to_pdf(prioridade_filtro, relatorio_tipo)
 
+
+def count_demandas_for_requester(nome):
+    row = fetch_one(
+        "SELECT COUNT(1) FROM demandas WHERE solicitante = ?",
+        (nome,),
+    )
+    return row[0] if row else 0

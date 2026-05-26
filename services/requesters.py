@@ -111,5 +111,9 @@ def create_requester(nome, email, cargo):
 
 def delete_requester(requester_id):
     """Deleta um solicitante."""
-    execute_query("DELETE FROM requesters WHERE id = ?", (requester_id,))
-
+    try:
+        execute_query("DELETE FROM requesters WHERE id = ?", (requester_id,))
+        return True
+    except sqlite3.Error as error:
+        log_db_error("delete_requester", error, requester_id=requester_id)
+        return False
