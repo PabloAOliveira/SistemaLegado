@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Painel de KPIs</h2>
+
+<section class="dashboard-kpis dashboard-kpis-page" aria-label="Indicadores gerais de demandas">
+    <article class="kpi-card kpi-card-total glass-panel-soft">
+        <span class="kpi-eyebrow">01 · KPI</span>
+        <strong>{{ dashboard.total }}</strong>
+        <span>Total de demandas</span>
+    </article>
+
+    <article class="kpi-card kpi-card-status glass-panel-soft">
+        <span class="kpi-eyebrow">02 · KPI</span>
+        <h3>Abertas · Concluidas · Atrasadas</h3>
+        <div class="kpi-status-grid">
+            {% for card in dashboard.status_cards %}
+            <div>
+                <strong>{{ card.count }}</strong>
+                <span>{{ card.label }}</span>
+                <small>{{ card.percent }}%</small>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="kpi-card kpi-card-critical glass-panel-soft">
+        <span class="kpi-eyebrow attention">03 · ATENCAO</span>
+        <h3>Demandas criticas</h3>
+        <strong>{{ dashboard.critical_demands|length }}</strong>
+        <div class="critical-list">
+            {% for critical in dashboard.critical_demands %}
+            <a href="/detalhes/{{ critical.id }}">
+                #{{ critical.id }} · {{ critical.titulo }}
+                <small>{{ critical.responsavel }} · {{ critical.status }}</small>
+            </a>
+            {% else %}
+            <span class="empty-kpi">Nenhuma demanda critica aberta.</span>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="kpi-card kpi-card-responsible glass-panel-soft">
+        <span class="kpi-eyebrow">04 · KPI</span>
+        <h3>Por responsavel</h3>
+        <div class="responsible-list">
+            {% for responsavel, total in dashboard.open_by_responsible %}
+            <div>
+                <span>{{ responsavel }}</span>
+                <strong>{{ total }}</strong>
+            </div>
+            {% else %}
+            <span class="empty-kpi">Sem demandas abertas.</span>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="kpi-card kpi-card-resolution glass-panel-soft">
+        <span class="kpi-eyebrow">05 · KPI</span>
+        <strong>{% if dashboard.average_resolution_days is not none %}{{ dashboard.average_resolution_days }}{% else %}--{% endif %}</strong>
+        <span>Tempo medio de resolucao</span>
+        <small>media entre demandas concluidas</small>
+    </article>
+</section>
+{% endblock %}
