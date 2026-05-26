@@ -225,6 +225,30 @@ def test_editar_post_prioridade_invalida_vira_baixa(client, db_path: Path):
     assert prioridade == ("baixa",)
 
 
+def test_deletar_solicitante_com_demanda_vinculada_retorna_409(client, db_path: Path):
+    response = client.delete("/solicitante/deletar/1", follow_redirects=False)
+
+    assert response.status_code == 409
+
+    with get_db(db_path) as conn:
+        cursor = conn.cursor()
+        requester = cursor.execute("SELECT id FROM requesters WHERE id = 1").fetchone()
+
+    assert requester is not None
+
+
+def test_deletar_solicitante_sem_demanda_vinculada_remove_registro(client, db_path: Path):
+    response = client.delete("/solicitante/deletar/3", follow_redirects=False)
+
+    assert response.status_code == 204
+
+    with get_db(db_path) as conn:
+        cursor = conn.cursor()
+        requester = cursor.execute("SELECT id FROM requesters WHERE id = 3").fetchone()
+
+    assert requester is None
+
+
 def test_deletar_remove_demanda_e_redireciona(client, db_path: Path):
     response = client.delete("/deletar/2", follow_redirects=False)
 
