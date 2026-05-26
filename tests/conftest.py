@@ -1,5 +1,7 @@
 import sqlite3
 import sys
+import hashlib
+import os
 from pathlib import Path
 
 import pytest
@@ -8,6 +10,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import app as app_module
+import db as db_module
+from API_EXTERNA.api import create_api_app
 
 
 @pytest.fixture
@@ -26,7 +30,11 @@ def db_path(tmp_path: Path) -> Path:
             descricao TEXT,
             solicitante TEXT,
             prioridade TEXT,
-            data_criacao TEXT
+            data_criacao TEXT,
+            status TEXT,
+            responsavel TEXT,
+            prazo TEXT,
+            data_conclusao TEXT
         )
         """
     )
@@ -57,14 +65,27 @@ def db_path(tmp_path: Path) -> Path:
 
     cursor.execute(
         """
-        INSERT INTO demandas (id, titulo, descricao, solicitante, prioridade, data_criacao)
-        VALUES (1, 'Corrigir bug no login', 'Usuários nao conseguem fazer login', 'Joao Silva', 'alta', '2024-01-15 10:30:00')
+        CREATE TABLE system_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            token TEXT NOT NULL,
+            token_salt TEXT NOT NULL,
+            user_type TEXT NOT NULL,
+            data_criacao TEXT NOT NULL
+        )
+        """
+    )
+
+    cursor.execute(
+        """
+        INSERT INTO demandas (id, titulo, descricao, solicitante, prioridade, data_criacao, status, responsavel, prazo, data_conclusao)
+        VALUES (1, 'Corrigir bug no login', 'Usuários nao conseguem fazer login', 'Joao Silva', 'alta', '2024-01-15 10:30:00', 'aberta', 'Tech Team', '2024-01-22', NULL)
         """
     )
     cursor.execute(
         """
-        INSERT INTO demandas (id, titulo, descricao, solicitante, prioridade, data_criacao)
-        VALUES (2, 'Implementar relatório de vendas', 'Precisamos de um relatório mensal', 'Maria Santos', 'media', '2024-01-16 14:20:00')
+        INSERT INTO demandas (id, titulo, descricao, solicitante, prioridade, data_criacao, status, responsavel, prazo, data_conclusao)
+        VALUES (2, 'Implementar relatório de vendas', 'Precisamos de um relatório mensal', 'Maria Santos', 'media', '2024-01-16 14:20:00', 'concluida', 'Tech Team', '2024-01-23', '2024-01-20 15:00:00')
         """
     )
     cursor.execute(
@@ -85,6 +106,19 @@ def db_path(tmp_path: Path) -> Path:
         """
     )
 
+    # Create system_users with valid token for testing
+    valid_token = "test-external-token-valid"
+    salt_hex = os.urandom(32).hex()
+    token_hash = hashlib.pbkdf2_hmac('sha256', valid_token.encode('utf-8'), bytes.fromhex(salt_hex), 100_000).hex()
+
+    cursor.execute(
+        """
+        INSERT INTO system_users (id, username, token, token_salt, user_type, data_criacao)
+        VALUES (1, 'external_api_client', ?, ?, 'externo', '2024-01-15 08:00:00')
+        """,
+        (token_hash, salt_hex)
+    )
+
     conn.commit()
     conn.close()
 
@@ -99,11 +133,42 @@ def client(db_path: Path, monkeypatch: pytest.MonkeyPatch):
     def connect_override(_database, *args, **kwargs):
         return original_connect(str(db_path), *args, **kwargs)
 
-    monkeypatch.setattr(app_module.sqlite3, "connect", connect_override)
-    app_module.app.config.update(
+    monkeypatch.setattr(db_module.sqlite3, "connect", connect_override)
+
+    app = app_module.create_app()
+    app.config.update(
         TESTING=True,
         SECRET_KEY="test-secret-key",
     )
 
-    with app_module.app.test_client() as test_client:
+    with app.test_client() as test_client:
         yield test_client
+
+
+@pytest.fixture
+def api_client(db_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Provide a Flask test client for the external API."""
+    original_connect = sqlite3.connect
+
+    def connect_override(_database, *args, **kwargs):
+        return original_connect(str(db_path), *args, **kwargs)
+
+    monkeypatch.setattr(db_module.sqlite3, "connect", connect_override)
+
+    api_app = create_api_app()
+    api_app.config.update(TESTING=True)
+
+    with api_app.test_client() as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def valid_token():
+    """Provide a valid token for API testing."""
+    return "test-external-token-valid"
+
+
+@pytest.fixture
+def invalid_token():
+    """Provide an invalid token for API testing."""
+    return "invalid-token-xyz"

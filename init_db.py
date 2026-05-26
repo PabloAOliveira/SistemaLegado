@@ -1,6 +1,6 @@
 from flask_migrate import upgrade
 from sqlalchemy import text
-from app import app
+from app import create_app
 from models import db
 
 SEED_DEMANDAS = [
@@ -25,6 +25,8 @@ SEED_REQUESTERS = [
 ]
 
 def run_migrations_and_seed() -> None:
+    # Create app using the factory to ensure configuration and extensions are initialized
+    app = create_app()
     with app.app_context():
         print("Rodando migrações...")
         upgrade()
