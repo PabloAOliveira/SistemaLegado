@@ -16,6 +16,15 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <script>
+        /* Anti-FOUC: aplica o tema antes de pintar o conteúdo. */
+        (function () {
+            var stored = localStorage.getItem('sgdi-theme');
+            var prefersDark = globalThis.matchMedia && globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.body.dataset.theme = stored || (prefersDark ? 'dark' : 'light');
+        })();
+    </script>
+
     <header class="header glass-panel">
         <div class="header-inner">
             <h1><a href="{{ url_for('index') }}" aria-label="Ir para página inicial">SGDI</a></h1>
@@ -64,11 +73,10 @@
 
     <script>
         (function() {
+            /* Tema já foi aplicado no topo do body (anti-FOUC).
+               Aqui apenas atualizamos o texto do botão e ligamos o toggle. */
             const root = document.body;
             const toggle = document.getElementById('theme-toggle');
-            const storedTheme = localStorage.getItem('sgdi-theme');
-            const prefersDark = globalThis.matchMedia && globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
-            let currentTheme = storedTheme || (prefersDark ? 'dark' : 'light');
 
             function applyTheme(theme) {
                 root.dataset.theme = theme;
@@ -77,13 +85,13 @@
                 }
             }
 
-            applyTheme(currentTheme);
+            applyTheme(root.dataset.theme || 'light');
 
             if (toggle) {
                 toggle.addEventListener('click', function() {
-                    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                    localStorage.setItem('sgdi-theme', currentTheme);
-                    applyTheme(currentTheme);
+                    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+                    localStorage.setItem('sgdi-theme', next);
+                    applyTheme(next);
                 });
             }
 

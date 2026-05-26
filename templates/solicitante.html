@@ -16,34 +16,32 @@
 
 <div class="solicitante-main-scroll">
 
-    <!-- Grade de gráficos matplotlib -->
     <div class="glass-panel-soft solicitante-charts-section">
-        <div class="charts-vertical-stack">
+        <div id="charts-overlay" class="charts-overlay" aria-live="polite">
+            <div class="charts-overlay__spinner"></div>
+            <span class="charts-overlay__text">Carregando gráficos…</span>
+        </div>
 
+        <div class="charts-vertical-stack">
             <div class="chart-card glass-panel-soft">
                 <p class="chart-label">Por Solicitante</p>
-                <div id="div-por-solicitante" class="chart-container"></div>
+                <div class="chart-container"><div id="div-por-solicitante"></div></div>
             </div>
-
             <div class="chart-card glass-panel-soft">
                 <p class="chart-label">Por Prioridade</p>
-                <div id="div-por-prioridade" class="chart-container"></div>
+                <div class="chart-container"><div id="div-por-prioridade"></div></div>
             </div>
-
             <div class="chart-card glass-panel-soft">
                 <p class="chart-label">Por Status</p>
-                <div id="div-por-status" class="chart-container"></div>
+                <div class="chart-container"><div id="div-por-status"></div></div>
             </div>
-
             <div class="chart-card glass-panel-soft">
                 <p class="chart-label">Evolução Temporal</p>
-                <div id="div-evolucao-temporal" class="chart-container"></div>
+                <div class="chart-container"><div id="div-evolucao-temporal"></div></div>
             </div>
-
         </div>
     </div>
 
-    <!-- Tabela de solicitantes -->
     <div class="glass-panel-soft solicitante-table">
         {% if requesters %}
         <table class="table-demandas">
@@ -90,61 +88,52 @@
 <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
 <script>
 (function () {
-    var btn = document.getElementById('btn-refresh-graficos');
-    var icon = document.getElementById('refresh-icon');
-
     var CHART_IDS = {
-        por_solicitante:  'div-por-solicitante',
-        por_prioridade:   'div-por-prioridade',
-        por_status:       'div-por-status',
+        por_solicitante:   'div-por-solicitante',
+        por_prioridade:    'div-por-prioridade',
+        por_status:        'div-por-status',
         evolucao_temporal: 'div-evolucao-temporal',
     };
 
-    var initialGraficos = {{ graficos | tojson | safe }};
+    var overlay = document.getElementById('charts-overlay');
+    var btn     = document.getElementById('btn-refresh-graficos');
+    var icon    = document.getElementById('refresh-icon');
+
+    function setLoading(on) {
+        overlay.classList.toggle('charts-overlay--hidden', !on);
+        btn.disabled = on;
+        icon.style.animation = on ? 'spin 1s linear infinite' : '';
+    }
 
     function drawCharts(data) {
-        Object.keys(CHART_IDS).forEach(function(key) {
-            var divId = CHART_IDS[key];
-            var container = document.getElementById(divId);
-            if (container && data[key]) {
-                var chartData = data[key];
-                Plotly.newPlot(divId, chartData.data, chartData.layout, {responsive: true, displayModeBar: false});
-            }
-        });
-        // Força o Plotly a recalcular as dimensões corretamente após o render
-        setTimeout(function() {
-            window.dispatchEvent(new Event('resize'));
-        }, 200);
+        var plots = Object.keys(CHART_IDS)
+            .filter(function (k) { return data[k]; })
+            .map(function (k) {
+                return Plotly.newPlot(CHART_IDS[k], data[k].data, data[k].layout, {
+                    responsive: true,
+                    displayModeBar: false,
+                });
+            });
+        return Promise.all(plots)
+            .catch(function (err) { console.error('Erro ao renderizar gráficos:', err); })
+            .finally(function () {
+                setLoading(false);
+                window.dispatchEvent(new Event('resize'));
+            });
     }
 
-    // Desenha na carga inicial
-    drawCharts(initialGraficos);
-
-    function setLoading(loading) {
-        btn.disabled = loading;
-        icon.style.transition = 'transform 0.6s linear';
-        if (loading) {
-            icon.style.animation = 'spin 1s linear infinite';
-        } else {
-            icon.style.animation = '';
-        }
-    }
+    drawCharts({{ graficos | tojson | safe }});
 
     btn.addEventListener('click', function () {
         setLoading(true);
-
         fetch('/solicitante/graficos')
             .then(function (res) {
-                if (!res.ok) { throw new Error('HTTP ' + res.status); }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 return res.json();
             })
-            .then(function (data) {
-                drawCharts(data);
-            })
+            .then(drawCharts)
             .catch(function (err) {
                 console.error('Erro ao atualizar gráficos:', err);
-            })
-            .finally(function () {
                 setLoading(false);
             });
     });
@@ -152,19 +141,15 @@
 
 function deletarSolicitante(id) {
     fetch('/solicitante/deletar/' + id, { method: 'DELETE' })
-        .then(function(response) {
+        .then(function (response) {
             if (response.status === 409) {
                 alert('Não é possível excluir este solicitante porque ele é responsável por uma ou mais demandas.');
                 return;
             }
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
+            if (!response.ok) throw new Error('HTTP ' + response.status);
             window.location.href = '/solicitante';
         })
-        .catch(function() {
-            alert('Erro ao deletar solicitante.');
-        });
+        .catch(function () { alert('Erro ao deletar solicitante.'); });
 }
 </script>
 
@@ -173,51 +158,95 @@ function deletarSolicitante(id) {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
 }
-#refresh-icon {
-    display: inline-block;
-}
+
+#refresh-icon { display: inline-block; }
 
 .solicitante-charts-section {
+    position: relative;
     padding: 20px;
-    margin-bottom: 0;
+}
+.solicitante-table { padding: 16px; }
+
+/* Overlay de carregamento dos gráficos */
+.charts-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    border-radius: 10px;
+    background: #eef2ff;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+body[data-theme="dark"] .charts-overlay {
+    background: #080f28;
+}
+.charts-overlay--hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
+.charts-overlay__spinner {
+    width: 52px;
+    height: 52px;
+    border: 5px solid rgba(79, 70, 229, 0.2);
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+body[data-theme="dark"] .charts-overlay__spinner {
+    border-color: rgba(129, 140, 248, 0.2);
+    border-top-color: #818cf8;
+}
+
+.charts-overlay__text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #4f46e5;
+    letter-spacing: 0.04em;
+}
+body[data-theme="dark"] .charts-overlay__text {
+    color: #818cf8;
+}
+
+/* Cards dos gráficos */
 .charts-vertical-stack {
-    display: block !important;
-    width: 100% !important;
-    max-width: 1100px !important;
-    margin: 0 auto !important;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
 }
 
 .chart-card {
-    display: block !important;
-    width: 100% !important;
-    padding: 20px !important;
-    margin-bottom: 60px !important;
-    border-radius: 10px !important;
-    box-sizing: border-box !important;
+    width: 100%;
+    padding: 20px;
+    margin-bottom: 60px;
+    border-radius: 10px;
+    box-sizing: border-box;
     background: var(--surface-soft);
     border: 1px solid var(--surface-border);
     backdrop-filter: blur(14px);
 }
 
 .chart-label {
-    margin: 0 0 15px 0 !important;
-    font-size: 0.85rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.05em !important;
-    text-transform: uppercase !important;
-    opacity: 0.8 !important;
-    display: block !important;
+    margin: 0 0 15px 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0.8;
 }
 
 .chart-container {
-    width: 100% !important;
-    height: 320px !important;
-    display: block !important;
-    position: relative !important;
-    margin: 0 auto !important;
-    box-sizing: border-box !important;
+    width: 100%;
+    height: 320px;
+}
+.chart-container > div {
+    width: 100%;
+    height: 100%;
 }
 </style>
 {% endblock %}
