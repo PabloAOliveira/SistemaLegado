@@ -442,6 +442,14 @@ def is_valid_person(name):
     return name in get_available_people()
 
 
+def count_demandas_for_requester(nome):
+    row = fetch_one(
+        "SELECT COUNT(1) FROM demandas WHERE solicitante = ?",
+        (nome,),
+    )
+    return row[0] if row else 0
+
+
 @app.route('/', methods=['GET'])
 def index():
     ensure_demandas_dashboard_columns()
@@ -697,6 +705,9 @@ def deletar_solicitante(requester_id):
     requester = get_requester_by_id(requester_id)
     if not requester:
         return ('', 404)
+
+    if count_demandas_for_requester(requester["nome"]) > 0:
+        return ('', 409)
 
     try:
         execute_query("DELETE FROM requesters WHERE id = ?", (requester_id,))
