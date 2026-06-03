@@ -10,9 +10,13 @@ import hashlib
 import hmac
 import math
 import time
+import uuid
+import logging
 from collections import deque
 from threading import Lock
+from werkzeug.exceptions import HTTPException
 from werkzeug.serving import make_server, BaseWSGIServer
+from services.logging import setup_logging, get_logger
 
 
 # Disable Werkzeug server header globally for this process.
@@ -32,6 +36,7 @@ RATE_LIMIT_RPM = 600
 
 _rate_limit_lock = Lock()
 _rate_limit_state = {}
+logger = get_logger(__name__)
 
 
 def get_rate_limit_key(req):
@@ -44,6 +49,14 @@ def get_rate_limit_key(req):
 def rate_limit_response(retry_after_seconds):
     response = make_response(jsonify({'detail': 'Rate limit exceeded'}), 429)
     response.headers['Retry-After'] = str(int(retry_after_seconds))
+    logger.warning(
+        'Rate limit exceeded',
+        extra={
+            'request_id': getattr(request, 'request_id', 'N/A'),
+            'remote_addr': request.remote_addr,
+            'retry_after': int(retry_after_seconds)
+        }
+    )
     return response
 
 
@@ -119,10 +132,26 @@ def token_required(no_auth_message=DEFAULT_NO_AUTH_MESSAGE,
         @wraps(f)
         def decorated(*args, **kwargs):
             token = get_token_from_request(request)
+            request_id = getattr(request, 'request_id', 'N/A')
+            
             if not token:
+                logger.warning(
+                    'Authentication failed: missing token',
+                    extra={'request_id': request_id, 'remote_addr': request.remote_addr}
+                )
                 return make_response(jsonify({'detail': no_auth_message}), 401)
+            
             if not is_authorized_token(token):
+                logger.warning(
+                    'Authentication failed: invalid token',
+                    extra={'request_id': request_id, 'remote_addr': request.remote_addr}
+                )
                 return make_response(jsonify({'detail': no_permission_message}), 403)
+            
+            logger.info(
+                'Authentication successful',
+                extra={'request_id': request_id, 'path': request.path}
+            )
             return f(*args, **kwargs)
         return decorated
     return decorator
@@ -541,58 +570,122 @@ def create_api_app():
     app_api = Flask(__name__)
     app_api.config['JSON_SORT_KEYS'] = False
 
+    # Setup logging
+    setup_logging(app_api, loki_enabled=True)
+    app_logger = get_logger('sgdi.api')
+
     no_authentication_message = DEFAULT_NO_AUTH_MESSAGE
     no_permission_message = DEFAULT_NO_PERMISSION_MESSAGE
 
     app_api.after_request(add_cors_headers)
 
     @app_api.before_request
-    def enforce_rate_limit():
+    def setup_request_context():
+        """Setup request_id and logging context."""
+        request.request_id = str(uuid.uuid4())
+        app_logger.info(
+            f'Incoming {request.method} {request.path}',
+            extra={'request_id': request.request_id, 'remote_addr': request.remote_addr}
+        )
         limited = check_rate_limit(request)
         if limited is not None:
             return limited
         return None
 
+    @app_api.after_request
+    def log_response(response):
+        """Log response status."""
+        request_id = getattr(request, 'request_id', 'N/A')
+        app_logger.info(
+            f'Response {response.status_code} {request.method} {request.path}',
+            extra={'request_id': request_id, 'status_code': response.status_code}
+        )
+        return response
+
+    @app_api.errorhandler(Exception)
+    def handle_exception(error):
+        """Log exceptions."""
+        if isinstance(error, HTTPException):
+            return error
+
+        request_id = getattr(request, 'request_id', 'N/A')
+        app_logger.error(
+            f'Exception: {str(error)}',
+            extra={'request_id': request_id, 'error_type': type(error).__name__},
+            exc_info=True
+        )
+        return jsonify({'detail': 'Internal server error'}), 500
+
     @app_api.route('/api/v1/demandas', methods=['GET'])
     @token_required(no_authentication_message, no_permission_message)
     def api_demandas():
-        page, per_page, error = get_pagination_params(request)
-        if error:
-            return error
-        offset = (page - 1) * per_page
-        where_clause, where_params = build_demandas_where_clause(request)
-        total_q = 'SELECT COUNT(1) FROM demandas ' + where_clause
-        total = fetch_all(total_q, where_params)[0][0]
+        request_id = getattr(request, 'request_id', 'N/A')
+        try:
+            page, per_page, error = get_pagination_params(request)
+            if error:
+                return error
+            offset = (page - 1) * per_page
+            where_clause, where_params = build_demandas_where_clause(request)
+            total_q = 'SELECT COUNT(1) FROM demandas ' + where_clause
+            total = fetch_all(total_q, where_params)[0][0]
 
-        rows_q = (
-            'SELECT id, titulo, descricao, solicitante, prioridade, data_criacao, '
-            'status, responsavel, prazo, data_conclusao FROM demandas '
-            + where_clause + ' ORDER BY id DESC LIMIT ? OFFSET ?'
-        )
-        params = list(where_params) + [per_page, offset]
-        rows = fetch_all(rows_q, tuple(params))
-        items = [serialize_demanda(row) for row in rows]
-        return jsonify(build_paginated_response(items, page, per_page, total))
+            rows_q = (
+                'SELECT id, titulo, descricao, solicitante, prioridade, data_criacao, '
+                'status, responsavel, prazo, data_conclusao FROM demandas '
+                + where_clause + ' ORDER BY id DESC LIMIT ? OFFSET ?'
+            )
+            params = list(where_params) + [per_page, offset]
+            rows = fetch_all(rows_q, tuple(params))
+            items = [serialize_demanda(row) for row in rows]
+            
+            result = build_paginated_response(items, page, per_page, total)
+            app_logger.info(
+                f'Demandas retrieved: {total} total, page {page}',
+                extra={'request_id': request_id, 'total': total, 'page': page}
+            )
+            return jsonify(result)
+        except Exception as e:
+            app_logger.error(
+                f'Error in api_demandas: {str(e)}',
+                extra={'request_id': request_id},
+                exc_info=True
+            )
+            raise
 
     @app_api.route('/api/v1/solicitantes', methods=['GET'])
     @token_required(no_authentication_message, no_permission_message)
     def api_solicitantes():
-        page, per_page, error = get_pagination_params(request)
-        if error:
-            return error
-        offset = (page - 1) * per_page
-        where_clause, where_params = build_requesters_where_clause(request)
-        total_q = 'SELECT COUNT(1) FROM requesters ' + where_clause
-        total = fetch_all(total_q, where_params)[0][0]
+        request_id = getattr(request, 'request_id', 'N/A')
+        try:
+            page, per_page, error = get_pagination_params(request)
+            if error:
+                return error
+            offset = (page - 1) * per_page
+            where_clause, where_params = build_requesters_where_clause(request)
+            total_q = 'SELECT COUNT(1) FROM requesters ' + where_clause
+            total = fetch_all(total_q, where_params)[0][0]
 
-        rows_q = (
-            'SELECT id, nome, cargo, data_criacao FROM requesters '
-            + where_clause + ' ORDER BY id DESC LIMIT ? OFFSET ?'
-        )
-        params = list(where_params) + [per_page, offset]
-        rows = fetch_all(rows_q, tuple(params))
-        items = [serialize_solicitante(row) for row in rows]
-        return jsonify(build_paginated_response(items, page, per_page, total))
+            rows_q = (
+                'SELECT id, nome, cargo, data_criacao FROM requesters '
+                + where_clause + ' ORDER BY id DESC LIMIT ? OFFSET ?'
+            )
+            params = list(where_params) + [per_page, offset]
+            rows = fetch_all(rows_q, tuple(params))
+            items = [serialize_solicitante(row) for row in rows]
+            
+            result = build_paginated_response(items, page, per_page, total)
+            app_logger.info(
+                f'Solicitantes retrieved: {total} total, page {page}',
+                extra={'request_id': request_id, 'total': total, 'page': page}
+            )
+            return jsonify(result)
+        except Exception as e:
+            app_logger.error(
+                f'Error in api_solicitantes: {str(e)}',
+                extra={'request_id': request_id},
+                exc_info=True
+            )
+            raise
 
     @app_api.route('/api/v1/openapi.json', methods=['GET'])
     def openapi_spec():
