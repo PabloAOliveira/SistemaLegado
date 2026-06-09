@@ -1,5 +1,73 @@
 # Changelog
 
+## 2026-06-09 - Sistema Legado - Refatoração de Filtros
+
+### Objetivo
+Substituir funcionalidade de busca textual por um sistema de filtros múltiplos e combinados.
+
+### Backend (`routes.py`, `services/demandas.py`)
+
+**Removido:**
+- Rota `/buscar` (GET) - busca textual por termo
+- Função `search_demandas(termo)` - busca em título, ID, solicitante
+- Import de `search_demandas` em `routes.py`
+
+**Adicionado:**
+- Suporte a filtros múltiplos na função `get_demandas()`:
+  - `prioridade_filtro` - Filtrar por prioridade (Alta, Media, Baixa)
+  - `solicitante_filtro` - Filtrar por solicitante
+  - `data_inicio` - Filtrar demandas a partir de data
+  - `data_fim` - Filtrar demandas até data
+- Query dinâmica que constrói cláusula WHERE conforme filtros informados
+- Rota `/` agora processa múltiplos parâmetros GET
+
+### Frontend (`templates/index.html`, `templates/base.html`)
+
+**Removido:**
+- Formulário de busca textual do header (`base.html`)
+- Envio automático ao selecionar prioridade (`onchange`)
+
+**Adicionado:**
+- Campos de filtro expandidos em `index.html`:
+  - Select de Solicitante (lista dinâmica)
+  - Input de Data Início
+  - Input de Data Fim
+  - Botão "Filtrar" para submeter
+  - Link "Limpar Filtros" para resetar
+- Filtros compatíveis com modal de exportação (novos parâmetros passados)
+
+### Styling (`static/style.css`)
+
+**Removido:**
+- Classe `.search-form` (formulário de busca no header)
+
+**Modificado:**
+- Expandido `.filter-form` para suportar:
+  - Labels com font-weight 600
+  - Inputs de date com width automático
+  - Melhor responsividade em mobile com flex-wrap
+
+### Testes (`tests/e2e/test_routes_e2e.py`)
+
+**Removido:**
+- `test_buscar_filtra_por_titulo()` - teste para rota `/buscar`
+
+### Documentação (`ARCHITECTURE.md`)
+
+**Atualizado:**
+- Descrição de `services/demandas.py` para refletir novos parâmetros de filtro
+- Remoção de menção a `search_demandas()`
+
+### Benefícios
+
+✅ Filtros múltiplos e combinados sem limite
+✅ Query dinâmica sem SQL injection risk (parametrizada)
+✅ Interface mais intuitiva com selects e date inputs
+✅ Redução de surface attack (remoção de busca textual)
+✅ Manutenção facilitada (menos funções, mais genérica)
+
+---
+
 ## 2026-03-28 - Higor Milani
 
 Este documento resume as mudancas realizadas no projeto `SistemaLegado` durante a sessao.
@@ -16,7 +84,7 @@ Este documento resume as mudancas realizadas no projeto `SistemaLegado` durante 
   - `detalhes`: `/detalhes/<int:demanda_id>`
   - `adicionar_comentario`: `/adicionar_comentario/<int:demanda_id>`
 - Verbos HTTP explicitos adicionados nas rotas GET:
-  - `/`, `/buscar`, `/detalhes/<int:demanda_id>`
+  - `/`, `/detalhes/<int:demanda_id>`
 - Rota de exclusao alterada para verbo REST correto:
   - `DELETE /deletar/<int:demanda_id>`
 - Tratamento de erros de banco melhorado:

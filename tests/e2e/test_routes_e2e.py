@@ -262,14 +262,6 @@ def test_deletar_remove_demanda_e_redireciona(client, db_path: Path):
     assert deleted is None
 
 
-def test_buscar_filtra_por_titulo(client):
-    response = client.get("/buscar?q=login")
-
-    assert response.status_code == 200
-    assert b"Corrigir bug no login" in response.data
-    assert b"Implementar relatorio de vendas" not in response.data
-
-
 def test_index_filtra_por_prioridade(client):
     response = client.get("/?prioridade=alta")
 

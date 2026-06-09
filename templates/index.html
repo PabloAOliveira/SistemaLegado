@@ -6,13 +6,27 @@
 <div class="page-toolbar glass-panel-soft">
     <div class="toolbar-inner">
         <form method="GET" action="/" class="filter-form">
-            <label for="prioridade">Filtrar por Prioridade:</label>
-            <select name="prioridade" id="prioridade" onchange="this.form.submit()">
+            <label for="prioridade">Prioridade:</label>
+            <select name="prioridade" id="prioridade">
                 <option value="todas" {% if prioridade_filtro =="todas" or not prioridade_filtro %}selected{% endif %}>Todas</option>
                 <option value="alta" {% if prioridade_filtro =="alta" %}selected{% endif %}>Alta</option>
                 <option value="media" {% if prioridade_filtro =="media" or prioridade_filtro =="media" %}selected{% endif %}>Media</option>
                 <option value="baixa" {% if prioridade_filtro =="baixa" %}selected{% endif %}>Baixa</option>
             </select>
+
+            <label for="solicitante">Solicitante:</label>
+            <select name="solicitante" id="solicitante">
+                <option value="">Todos</option>
+                {% for person in people %}
+                <option value="{{ person }}" {% if solicitante_filtro == person %}selected{% endif %}>{{ person }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="data_inicio">Data Início:</label>
+            <input type="date" name="data_inicio" id="data_inicio" value="{{ data_inicio }}">
+
+            <button type="submit">Filtrar</button>
+            <a href="/" class="button-link button-link-muted">Limpar Filtros</a>
         </form>
         <div class="toolbar-actions">
             <button type="button" class="button-link" id="export-btn" aria-label="Exportar dados">📥 Exportar</button>
@@ -34,6 +48,9 @@
 
             <form id="export-form" method="POST">
                 <input type="hidden" name="prioridade_filtro" value="{{ prioridade_filtro or 'todas' }}">
+                <input type="hidden" name="solicitante_filtro" value="{{ solicitante_filtro or '' }}">
+                <input type="hidden" name="data_inicio" value="{{ data_inicio or '' }}">
+                <input type="hidden" name="data_fim" value="{{ data_fim or '' }}">
 
                 <label for="relatorio_tipo">Tipo de relatório:</label>
                 <select name="relatorio_tipo" id="relatorio_tipo">
