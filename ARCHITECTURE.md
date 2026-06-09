@@ -72,15 +72,14 @@ CRUD e lógica de solicitantes:
 
 ### 5. **services/demandas.py** - Gestão de Demandas
 CRUD e lógica de demandas:
-- `get_demandas(filtro)` - Lista com filtros de prioridade
+- `get_demandas(prioridade, solicitante, data_inicio, data_fim)` - Lista com filtros múltiplos
 - `get_demanda(id)` - Busca uma
 - `create_demanda()` - Cria nova
 - `update_demanda()` - Atualiza
 - `delete_demanda()` - Deleta
-- `search_demandas(termo)` - Busca por termo
 - `ensure_demandas_dashboard_columns()` - Garante schema atualizado
 
-**Benefício:** Lógica de demandas isolada, incluindo normalização de dados.
+**Benefício:** Lógica de demandas isolada com suporte a filtros múltiplos e combinados.
 
 ### 6. **services/comentarios.py** - Gestão de Comentários
 CRUD de comentários:

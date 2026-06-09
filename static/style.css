@@ -144,12 +144,6 @@ a:hover {
     flex-wrap: wrap;
 }
 
-.search-form {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
 .container {
     width: 98%;
     height: calc(100dvh - var(--header-height) - var(--footer-height) - (var(--content-gap) * 2));
@@ -388,9 +382,21 @@ body[data-theme="dark"] .responsible-list div {
     flex-wrap: wrap;
 }
 
-.filter-form select {
+.filter-form label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.filter-form select,
+.filter-form input[type="date"] {
     width: auto;
-    min-width: 160px;
+    min-width: 140px;
+}
+
+.filter-form button,
+.filter-form .button-link {
+    white-space: nowrap;
 }
 
 .toolbar-actions {

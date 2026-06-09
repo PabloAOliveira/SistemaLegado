@@ -47,12 +47,53 @@ def ensure_demandas_dashboard_columns():
     )
 
 
-def get_demandas(prioridade_filtro='todas'):
-    """Retorna lista de demandas com filtro de prioridade."""
+def get_demandas(prioridade_filtro='todas', solicitante_filtro='', data_inicio='', data_fim=''):
+    """Retorna lista de demandas com filtros múltiplos: prioridade, solicitante e data."""
     ensure_demandas_dashboard_columns()
 
-    if prioridade_filtro == 'todas' or not prioridade_filtro:
-        demandas = fetch_all("""
+    # Construir cláusula WHERE dinamicamente
+    where_clauses = []
+    params = []
+
+    # Filtro de prioridade
+    if prioridade_filtro and prioridade_filtro != 'todas':
+        prioridade_normalizada = normalize_priority(prioridade_filtro)
+        where_clauses.append("LOWER(prioridade) = ?")
+        params.append(prioridade_normalizada)
+
+    # Filtro de solicitante
+    if solicitante_filtro and solicitante_filtro.strip():
+        where_clauses.append("LOWER(solicitante) = LOWER(?)")
+        params.append(solicitante_filtro.strip())
+
+    # Filtro de data de início
+    if data_inicio and data_inicio.strip():
+        where_clauses.append("DATE(data_criacao) >= ?")
+        params.append(data_inicio.strip())
+
+    # Filtro de data de fim
+    if data_fim and data_fim.strip():
+        where_clauses.append("DATE(data_criacao) <= ?")
+        params.append(data_fim.strip())
+
+    # Construir query
+    where_clause = " AND ".join(where_clauses)
+    if where_clause:
+        query = f"""
+            SELECT *
+            FROM demandas
+            WHERE {where_clause}
+            ORDER BY CASE LOWER(prioridade)
+                        WHEN 'alta' THEN 1
+                        WHEN 'média' THEN 2
+                        WHEN 'media' THEN 2
+                        WHEN 'baixa' THEN 3
+                        ELSE 4
+                     END,
+                     data_criacao DESC
+        """
+    else:
+        query = """
             SELECT *
             FROM demandas
             ORDER BY CASE LOWER(prioridade)
@@ -63,16 +104,9 @@ def get_demandas(prioridade_filtro='todas'):
                         ELSE 4
                      END,
                      data_criacao DESC
-        """)
-    else:
-        prioridade_normalizada = normalize_priority(prioridade_filtro)
-        demandas = fetch_all("""
-            SELECT *
-            FROM demandas
-            WHERE LOWER(prioridade) = ?
-            ORDER BY data_criacao DESC
-        """, (prioridade_normalizada,))
+        """
 
+    demandas = fetch_all(query, tuple(params) if params else ())
     return demandas
 
 
@@ -80,19 +114,6 @@ def get_demanda(demanda_id):
     """Busca uma demanda por ID."""
     ensure_demandas_dashboard_columns()
     return fetch_one('SELECT * FROM demandas WHERE id = ?', (demanda_id,))
-
-
-def search_demandas(termo):
-    """Busca demandas por termo (título, ID ou solicitante)."""
-    ensure_demandas_dashboard_columns()
-    like_term = f"%{termo}%"
-    return fetch_all(
-        '''SELECT * FROM demandas 
-           WHERE titulo LIKE ? 
-           OR id LIKE ?
-           OR solicitante LIKE ?''',
-        (like_term, like_term, like_term),
-    )
 
 
 def create_demanda(titulo, descricao, solicitante, responsavel, prioridade, status):
