@@ -1,7 +1,7 @@
 """Rotas da aplicação."""
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from services.demandas import (
-    get_demandas, get_demanda, search_demandas, create_demanda,
+    get_demandas, get_demanda, create_demanda,
     update_demanda, delete_demanda, ensure_demandas_dashboard_columns
 )
 from services.requesters import (
@@ -26,8 +26,29 @@ def register_routes(app):
         if prioridade_filtro not in ("todas", ""):
             prioridade_filtro = normalize_priority(prioridade_filtro)
 
-        demandas = get_demandas(prioridade_filtro)
-        return render_template('index.html', demandas=demandas, prioridade_filtro=prioridade_filtro)
+        solicitante_filtro = request.args.get('solicitante', '').strip()
+        data_inicio = request.args.get('data_inicio', '').strip()
+        data_fim = request.args.get('data_fim', '').strip()
+
+        demandas = get_demandas(
+            prioridade_filtro=prioridade_filtro,
+            solicitante_filtro=solicitante_filtro,
+            data_inicio=data_inicio,
+            data_fim=data_fim
+        )
+        
+        from services.requesters import get_available_people
+        people = get_available_people()
+        
+        return render_template(
+            'index.html',
+            demandas=demandas,
+            prioridade_filtro=prioridade_filtro,
+            solicitante_filtro=solicitante_filtro,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            people=people
+        )
 
     @app.route('/dashboard', methods=['GET'])
     def dashboard():
@@ -97,13 +118,6 @@ def register_routes(app):
         else:
             flash('Erro ao deletar demanda!')
         return redirect(url_for('index'))
-
-    @app.route('/buscar', methods=['GET'])
-    def buscar():
-        ensure_demandas_dashboard_columns()
-        termo = request.args.get('q', '').strip()
-        resultados = search_demandas(termo)
-        return render_template('index.html', demandas=resultados, prioridade_filtro='todas')
 
     @app.route('/detalhes/<int:demanda_id>', methods=['GET'])
     def detalhes(demanda_id):

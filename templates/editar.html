@@ -83,15 +83,17 @@
         </label>
     </div>
 
-    {% if demanda|length > 9 and demanda[9] %}
     <div class="form-field">
         <label for="data-conclusao">Data de Conclusao:
-            {% set data_conclusao = demanda[9].split(' ') %}
-            {% set conclusao_parts = data_conclusao[0].split('-') %}
-            <input id="data-conclusao" type="text" value="{{ conclusao_parts[2] }}/{{ conclusao_parts[1] }}/{{ conclusao_parts[0] }} {{ data_conclusao[1][:5] }}" disabled>
+            {% if demanda|length > 9 and demanda[9] %}
+                {% set data_conclusao = demanda[9].split(' ') %}
+                {% set conclusao_parts = data_conclusao[0].split('-') %}
+                <input id="data-conclusao" type="text" value="{{ conclusao_parts[2] }}/{{ conclusao_parts[1] }}/{{ conclusao_parts[0] }} {{ data_conclusao[1][:5] }}" disabled>
+            {% else %}
+                <input id="data-conclusao" type="text" value="" disabled>
+            {% endif %}
         </label>
     </div>
-    {% endif %}
 
     <div class="form-actions">
         <button type="submit">Atualizar</button>
