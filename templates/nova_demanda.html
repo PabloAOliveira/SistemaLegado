@@ -51,17 +51,6 @@
 
     <div class="form-field">
         <label>Status:<br>
-            {% set selected_status = form_data.get('status', 'aberta') %}
-            <select name="status" required>
-                <option value="aberta" {% if selected_status == 'aberta' %}selected{% endif %}>Aberta</option>
-                <option value="concluida" {% if selected_status == 'concluida' %}selected{% endif %}>Concluida</option>
-                <option value="cancelada" {% if selected_status == 'cancelada' %}selected{% endif %}>Cancelada</option>
-            </select>
-        </label>
-    </div>
-
-    <div class="form-field">
-        <label>Status:<br>
             {% set selected_status = form_data.get('status', 'Aberto') %}
             <select name="status" required>
                 <option value="Aberto" {% if selected_status == 'Aberto' %}selected{% endif %}>Aberto</option>
