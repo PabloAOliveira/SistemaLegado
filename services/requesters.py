@@ -7,22 +7,22 @@ from services.utils import date_now
 
 def ensure_requesters_table_seeded():
     """Garante que a tabela de solicitantes existe e está populada."""
-    execute_query(
-        """
-        CREATE TABLE IF NOT EXISTS requesters (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
-            email TEXT NOT NULL UNIQUE,
-            cargo TEXT NOT NULL,
-            data_criacao TEXT NOT NULL
+    row = fetch_one("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'requesters'")
+    table_exists = row is not None
+
+    if not table_exists:
+        execute_query(
+            """
+            CREATE TABLE IF NOT EXISTS requesters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                cargo TEXT NOT NULL,
+                data_criacao TEXT NOT NULL
+            )
+            """
         )
-        """
-    )
 
-    row = fetch_one("SELECT COUNT(1) FROM requesters")
-    count = row[0] if row else 0
-
-    if count == 0:
         now = date_now()
         for requester in DEFAULT_REQUESTERS:
             execute_query(

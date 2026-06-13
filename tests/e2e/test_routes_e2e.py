@@ -3,6 +3,8 @@ import datetime
 from pathlib import Path
 from contextlib import closing
 
+import pytest
+
 import app as app_module
 
 
@@ -40,7 +42,7 @@ def test_dashboard_tempo_medio_usa_media_das_concluidas():
 
     dashboard = app_module.calculate_dashboard_metrics(demandas)
 
-    assert dashboard["average_resolution_days"] == 3.0
+    assert dashboard["average_resolution_days"] == pytest.approx(3.0)
 
 
 def test_nova_demanda_get_exibe_formulario(client):
@@ -247,6 +249,18 @@ def test_deletar_solicitante_sem_demanda_vinculada_remove_registro(client, db_pa
         requester = cursor.execute("SELECT id FROM requesters WHERE id = 3").fetchone()
 
     assert requester is None
+
+
+def test_solicitante_nao_recria_default_quando_tabela_fica_vazia(client, db_path: Path):
+    with get_db(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM requesters")
+        conn.commit()
+
+    response = client.get("/solicitante")
+
+    assert response.status_code == 200
+    assert b"Nenhum solicitante cadastrado." in response.data
 
 
 def test_deletar_remove_demanda_e_redireciona(client, db_path: Path):
