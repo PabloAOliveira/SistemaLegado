@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,10 +55,9 @@
 
     <script>
         (function() {
-            var root = document.body;
-            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var currentTheme = localStorage.getItem('sgdi-theme') || (prefersDark ? 'dark' : 'light');
-            root.setAttribute('data-theme', currentTheme);
+            const root = document.body;
+            const prefersDark = globalThis.matchMedia && globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+            root.dataset.theme = localStorage.getItem('sgdi-theme') || (prefersDark ? 'dark' : 'light');
         })();
     </script>
 </body>

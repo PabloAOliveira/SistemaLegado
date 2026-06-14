@@ -29,7 +29,7 @@ def create_app():
 
     # Inicializar extensões
     db.init_app(app)
-    migrate = Migrate(app, db)
+    Migrate(app, db)
 
     # Registrar rotas
     register_routes(app)

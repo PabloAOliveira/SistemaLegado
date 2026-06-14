@@ -7,6 +7,9 @@ omit =
     */migrations/*
     */venv/*
     */.venv/*
+    app_old.py
+    API_EXTERNA/manage_tokens.py
+    init_db.py
 
 [report]
 exclude_lines =

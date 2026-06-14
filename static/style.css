@@ -1295,7 +1295,6 @@ body[data-theme="dark"] .sutita-logo {
 .contact-card {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
     gap: 14px;
     padding: 16px 18px;
     border-radius: 14px;
