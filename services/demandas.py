@@ -51,10 +51,12 @@ def get_demandas(prioridade_filtro='todas'):
     """Retorna lista de demandas com filtro de prioridade."""
     ensure_demandas_dashboard_columns()
 
+    # Por padrão não exibimos demandas concluídas ou canceladas na listagem
     if prioridade_filtro == 'todas' or not prioridade_filtro:
         demandas = fetch_all("""
             SELECT *
             FROM demandas
+            WHERE LOWER(status) NOT IN ('concluida', 'cancelada')
             ORDER BY CASE LOWER(prioridade)
                         WHEN 'alta' THEN 1
                         WHEN 'média' THEN 2
@@ -70,6 +72,7 @@ def get_demandas(prioridade_filtro='todas'):
             SELECT *
             FROM demandas
             WHERE LOWER(prioridade) = ?
+              AND LOWER(status) NOT IN ('concluida', 'cancelada')
             ORDER BY data_criacao DESC
         """, (prioridade_normalizada,))
 
@@ -86,11 +89,14 @@ def search_demandas(termo):
     """Busca demandas por termo (título, ID ou solicitante)."""
     ensure_demandas_dashboard_columns()
     like_term = f"%{termo}%"
+    # Exclui demandas concluídas e canceladas também na busca quando exibida na listagem
     return fetch_all(
         '''SELECT * FROM demandas 
-           WHERE titulo LIKE ? 
+           WHERE (titulo LIKE ? 
            OR id LIKE ?
-           OR solicitante LIKE ?''',
+           OR solicitante LIKE ?)
+             AND LOWER(status) NOT IN ('concluida', 'cancelada')
+           ORDER BY data_criacao DESC''',
         (like_term, like_term, like_term),
     )
 

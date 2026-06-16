@@ -6,8 +6,17 @@ Sistema para gerenciar demandas internas da empresa.
 
 ```bash
 pip install -r requirements.txt
+```
+
+```bash
 python -m flask --app app db upgrade
+```
+
+```bash
 python init_db.py
+```
+
+```bash
 python app.py
 ```
 Para ativar o ambiente virtual:
